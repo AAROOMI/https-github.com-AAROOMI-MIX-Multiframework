@@ -77,6 +77,7 @@ export type AuditAction =
   | 'DOCUMENT_GENERATED'
   | 'DOCUMENT_APPROVED'
   | 'DOCUMENT_REJECTED'
+  | 'DOCUMENT_CRYPTOGRAPHIC_SEAL'
   | 'COMPANY_PROFILE_UPDATED'
   | 'COMPANY_CREATED'
   | 'PASSWORD_RESET_REQUESTED'
@@ -395,6 +396,20 @@ export interface PolicyDocument {
   generatedBy?: 'user' | 'AI Agent';
   versionHistory?: DocumentVersion[];
   agentSignatures?: AgentSignature[]; // New: Stores AI Validation
+  isEncrypted?: boolean;
+  encryptedContent?: {
+    policy: string;
+    procedure: string;
+    guideline: string;
+  };
+  cryptographicSeal?: {
+    hash: string;
+    signatureCISO: string;
+    signatureCTO: string;
+    signatureCEO: string;
+    timestamp: number;
+    qrcodeUrl?: string;
+  };
 }
 
 export interface PrebuiltPolicyTemplate {

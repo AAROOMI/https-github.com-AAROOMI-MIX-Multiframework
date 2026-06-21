@@ -27,7 +27,9 @@ import {
   Clock,
   Printer,
   History,
-  Scale
+  Scale,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIService } from '../services/aiService';
@@ -364,6 +366,9 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
     const [meetingLog, setMeetingLog] = useState<DialogueEntry[]>([]);
     const [isThinking, setIsThinking] = useState(false);
     const [isMicActive, setIsMicActive] = useState(false);
+    const [isVoiceOutputEnabled, setIsVoiceOutputEnabled] = useState(true);
+    const [speakingDialogIdx, setSpeakingDialogIdx] = useState<number | null>(null);
+    const [designatedRespondent, setDesignatedRespondent] = useState<any | null>(null);
 
     // Missing Task generation states
     const [isTaskGenerating, setIsTaskGenerating] = useState(false);
@@ -566,11 +571,16 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
     }, [delegatedTasks]);
 
     // Text To Speech with optimized natural voice parameters mapping distinct agents
-    const speakLine = (line: Partial<DialogueEntry> | string, speakerName: string) => {
+    const speakLine = (line: Partial<DialogueEntry> | string, speakerName: string, msgIdx?: number | null, forceSpeak?: boolean) => {
         if (!('speechSynthesis' in window)) return;
         
         // Suppress overlap
         window.speechSynthesis.cancel();
+
+        if (!isVoiceOutputEnabled && !forceSpeak) {
+            console.log("Speech output is disabled by user setting.");
+            return;
+        }
 
         let rawText = "";
         let speakingLanguage = boardroomLang;
@@ -643,6 +653,18 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
             utterance.lang = targetVoice.lang;
         }
 
+        if (msgIdx !== undefined && msgIdx !== null) {
+            utterance.onstart = () => {
+                setSpeakingDialogIdx(msgIdx);
+            };
+            utterance.onend = () => {
+                setSpeakingDialogIdx(current => current === msgIdx ? null : current);
+            };
+            utterance.onerror = () => {
+                setSpeakingDialogIdx(current => current === msgIdx ? null : current);
+            };
+        }
+
         window.speechSynthesis.speak(utterance);
     };
 
@@ -676,6 +698,32 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
         setIsThinking(true);
         const currentRunId = ++activeSimulationIdRef.current;
 
+        // Establish the designated responsible agent based on technical domain context
+        let responsibleAgent = { name: "Ahmed Al-Mansoori", role: "CISO" };
+        if (userMsg) {
+            const query = userMsg.toLowerCase();
+            if (query.includes("privacy") || query.includes("pdpl") || query.includes("consent") || query.includes("notice") || query.includes("data transfer")) {
+                responsibleAgent = { name: "Hoda AI", role: "DPO (Data Protection Officer)" };
+            } else if (query.includes("nca") || query.includes("sama") || query.includes("regulatory") || query.includes("framework") || query.includes("clause") || query.includes("compliance") || query.includes("governance")) {
+                responsibleAgent = { name: "Asaad AI", role: "Compliance Specialist" };
+            } else if (query.includes("code") || query.includes("review") || query.includes("software") || query.includes("sdlc") || query.includes("security scanning")) {
+                responsibleAgent = { name: "Khalid AI", role: "Secure Code Reviewer" };
+            } else if (query.includes("risk") || query.includes("mitigation") || query.includes("register") || query.includes("appetite") || query.includes("tolerance")) {
+                responsibleAgent = { name: "Rashid AI", role: "GRC Risk Manager" };
+            } else if (query.includes("backup") || query.includes("disaster") || query.includes("bcm") || query.includes("continuity") || query.includes("iso 22301") || query.includes("resilience")) {
+                responsibleAgent = { name: "Rayan AI", role: "ISO 22301 Specialist" };
+            } else if (query.includes("cloud") || query.includes("bucket") || query.includes("database") || query.includes("serverless") || query.includes("budget") || query.includes("asset")) {
+                responsibleAgent = { name: "Mohammed AI", role: "CIO" };
+            } else if (query.includes("network") || query.includes("firewall") || query.includes("proxy") || query.includes("port") || query.includes("cyber range") || query.includes("encryption")) {
+                responsibleAgent = { name: "Fahad AI", role: "CTO" };
+            } else if (query.includes("audit") || query.includes("evidence") || query.includes("check") || query.includes("verification") || query.includes("screenshot") || query.includes("logs")) {
+                responsibleAgent = { name: "Abdullah AI", role: "Internal Auditor" };
+            } else if (query.includes("iso 27001") || query.includes("isms") || query.includes("annex") || query.includes("statement of applicability")) {
+                responsibleAgent = { name: "Sahar AI", role: "ISO 27001 Specialist" };
+            }
+        }
+        setDesignatedRespondent(responsibleAgent);
+
         try {
             if (meetingLog.length === 0 && !userMsg) {
                 const welcomeLine: DialogueEntry = {
@@ -684,8 +732,8 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                     message_ar: "مرحباً بأعضاء مجلس الإدارة. بصفتي مسؤول أمن المعلومات، أرغب في بدء هذه الجلسة الاستراتيجية. يجب علينا مراجعة الضوابط المعلقة وتوثيقها لتسليمها لمدقق الحسابات. كيف ترغبون بالبدء؟",
                     timestamp: Date.now()
                 };
-                speakLine(welcomeLine, welcomeLine.speaker);
                 setMeetingLog([welcomeLine]);
+                setTimeout(() => speakLine(welcomeLine, welcomeLine.speaker, 0), 100);
                 setIsThinking(false);
                 return;
             }
@@ -695,22 +743,28 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
             const outstandingTasks = delegatedTasks.filter(t => t.status !== 'Done').length;
 
             const conversationHistory = meetingLog.slice(-5).map(m => `${m.speaker}: "${m.message_en}"`).join('\n');
+            
             const specificPrompt = userMsg 
-                ? `The administrator explicitly requested: "${userMsg}". Speak relative to their query representing your unique GRC boardroom expertise.`
+                ? `The administrator (Human) asked: "${userMsg}". The primary responsible domain expert for this query is "${responsibleAgent.name}" of role or core capability of [${responsibleAgent.role}]. That agent MUST respond first, speaking with high-level professional authority, and addressing the specific technical layers of the human's query. Other board members can then debate or add secondary feedback.`
                 : `Continue GRC strategizing. Focus on SAMA compliance, security architecture mapping, and auditor evidence verification.`;
 
             const sysInstruction = `
-            You are drafting a professional dialog for a GRC board meeting consisting of:
-            1. Ahmed Al-Mansoori (CISO) - Risk-aware, authoritative, focused on policies, incident command, and ultimate accountability. Expert in Skills 010 (Memory Acquisition/Forensics) and 080 (Ransomware Containment).
-            2. Fahad AI (CTO) - Rapid, technical, infrastructure protector, focusing on secure technical implementations and architecture gates.
-            3. Mohammed AI (CIO) - Visionary, resource optimizer, governance alignment. Expert in Cloud Security Identity Mapping (Skill 001) and Default bucket hardening (Skill 002).
-            4. Ibrahim AI (Operations) - Execution supervisor, workflows, practical day-to-day coordination.
-            5. Asaad AI (Compliance) - Meticulous, expert mapping NCA, SAMA CSF, and PDPL legal clauses.
-            6. Abdullah AI (Internal Auditor) - Skeptical, data-centric, demands screenshots, configs, verification evidence logs, and hashes.
+            You are drafting a professional dialog for an active, multi-disciplinary, cross-functional GRC board meeting consisting of:
+            1. Ahmed Al-Mansoori (CISO) - Authoritative, ultimate accountability, risk-aware. Expert in incident handling and forensics.
+            2. Fahad AI (CTO) - Highly technical, focus on secure edge gateways, configurations, network protection, and keys.
+            3. Mohammed AI (CIO) - Visionary resource allocator, cloud identity structures, assets, and storage systems.
+            4. Ibrahim AI (Operations) - Execution supervisor, workflows, daily continuity, tracking.
+            5. Asaad AI (Compliance) - Meticulous researcher mapping SAMA CSF, NCA ECC, and legal frameworks.
+            6. Abdullah AI (Internal Auditor) - Skeptical, data-driven, demands telemetry evidence logs and configuration hashes.
+            7. Hoda AI (DPO) - Expert in Saudi Personal Data Protection Law (PDPL), privacy registry, consent flows, cross-border controls.
+            8. Sahar AI (ISO 27001 Specialist) - Lead implementer for Information Security Manager Manuals and Statement of Applicability (SoA) Annex A checks.
+            9. Rayan AI (ISO 22301 Specialist) - Expert in business continuity impact analysis (BIA), playbooks, resilience tests.
+            10. Khalid AI (Secure Code Reviewer) - In-depth static/dynamic vulnerabilities analyst, secure pipelines, and refactoring.
+            11. Rashid AI (GRC Risk Manager / Special Envoy) - Risk appetite models, threat modeling, financial risk.
 
             **Integrated Agentic Skills Repository Knowledge Base:**
             - Repository: https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git
-            - Total skills: 754 Agentic Cognitive Skills across 26 domains (Cloud Security, DevSecOps, Cryptography, BCM ISO 22301, ISMS ISO 27001, Privacy PDPL, secure code reviewers, AI safety, etc.)
+            - Total skills: 754 Agentic Cognitive Skills across 26 domains (Cloud, DevSecOps, Cryptography, BCM ISO 22301, ISMS ISO 27001, Privacy PDPL, secure code reviews, AI safety, etc.)
             - Mapped directly to active controls in NCA ECC, SAMA CSF, PDPL, CMA, ISO 27001, ISO 22301, NIST AI RMF, and NIST CSF.
 
             **System GRC Reality State:**
@@ -722,10 +776,10 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
             ${conversationHistory}
 
             **Task:**
-            Produce custom dialog with exactly 2 to 3 logically structured turns where boardroom members interact directly. They can mention specific technical aspects from our 754 cybersecurity skills library to back up their proposed decisions. Avoid repeating greeting messages, robotic templates, or corporate fluff. Speak with absolute professional GRC authority.
+            Produce a custom dialog with exactly 2 to 3 logically structured turns where boardroom members interact directly. The first turn MUST be from the designated domain expert ("Ahmed Al-Mansoori" | "Fahad AI" | "Mohammed AI" | "Ibrahim AI" | "Asaad AI" | "Abdullah AI" | "Hoda AI" | "Sahar AI" | "Rayan AI" | "Khalid AI" | "Rashid AI") of the question! Speak with absolute professional GRC authority, using concrete terms from our 754 technical skills repository.
 
             **Output Format (JSON Array ONLY):**
-            [{ "speaker": "Ahmed Al-Mansoori" | "Fahad AI" | "Mohammed AI" | "Ibrahim AI" | "Asaad AI" | "Abdullah AI", "message_en": "Professional feedback", "message_ar": "ترجمة عربية متناسقة ممتازة" }]
+            [{ "speaker": "Ahmed Al-Mansoori" | "Fahad AI" | "Mohammed AI" | "Ibrahim AI" | "Asaad AI" | "Abdullah AI" | "Hoda AI" | "Sahar AI" | "Rayan AI" | "Khalid AI" | "Rashid AI", "message_en": "Professional feedback", "message_ar": "ترجمة عربية متناسقة ممتازة" }]
             `;
 
             let simulatedThread: any[] = [];
@@ -744,14 +798,14 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                 console.warn("AI dialog synthesis fallback.", err);
                 simulatedThread = [
                     {
-                        speaker: "Ahmed Al-Mansoori",
-                        message_en: "I completely agree that keeping our structural controls validated is key. Asaad, please summarize the documentation parameters for SAMA and NCA parity.",
-                        message_ar: "أتفق تماماً مع هذا الرأي؛ إن الحفاظ على معاييرنا خاضعة للمراجعة المستمرة هو الأهم. أسعد، يرجى تقديم ملخص حول جاهزية سياستنا للتدقيق."
+                        speaker: responsibleAgent.name,
+                        message_en: `As the responsible representative for this topic, I can confirm that we are actively reviewing all relevant technical parameters. We will align our operational checklists with the specified controls.`,
+                        message_ar: `بصفتي المسؤول المباشر عن هذا الموضوع، أؤكد أننا نراجع الإعدادات الفنية بالتفصيل لتتماشى مع الضوابط المطلوبة.`
                     },
                     {
-                        speaker: "Asaad AI",
-                        message_en: "Certainly. Our data policies under PDPL Article 4 align directly with NCA Governance domain structure. We are continuously structuring our evidence database for Abdullah's validation.",
-                        message_ar: "بالتأكيد. تتماشى سياسات البيانات الخاصة بنا بموجب لوائح الأمن السيبراني ولائحة حماية البيانات بشكل كامل. نحن نجهز الأدلة لتدقيق عبد الله."
+                        speaker: "Ahmed Al-Mansoori",
+                        message_en: "Indeed. Let's make sure our compliance logs reflect these evidence parameters for the internal auditor to verify.",
+                        message_ar: "بالفعل. دعونا نضمن تسجيل كافة هذه البنود في سجلات المطابقة ليسهل على المدقق الداخلي مراجعتها."
                     }
                 ];
             }
@@ -760,8 +814,6 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
             for (const turn of simulatedThread) {
                 if (activeSimulationIdRef.current !== currentRunId) break;
 
-                speakLine(turn, turn.speaker);
-
                 const entry: DialogueEntry = {
                     speaker: turn.speaker,
                     message_en: turn.message_en,
@@ -769,10 +821,22 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                     timestamp: Date.now()
                 };
 
-                setMeetingLog(prev => [...prev, entry]);
+                // Add to list first, then speak on the correct index
+                await new Promise<void>(resolve => {
+                    setMeetingLog(prev => {
+                        const nextLog = [...prev, entry];
+                        const idx = nextLog.length - 1;
+                        // Trigger voice playback matching the exact dialog index
+                        setTimeout(() => {
+                            speakLine(entry, entry.speaker, idx);
+                        }, 50);
+                        resolve();
+                        return nextLog;
+                    });
+                });
 
                 // Wait during pronunciation duration
-                const duration = Math.max(2500, turn.message_en.length * 60);
+                const duration = Math.max(3500, turn.message_en.length * 60);
                 await new Promise(resolve => setTimeout(resolve, duration));
             }
 
@@ -1650,22 +1714,77 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                                 </h3>
                             </div>
                             
-                            {/* Multilingual control */}
-                            <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-lg">
-                                <button 
-                                    onClick={() => setBoardroomLang('en')}
-                                    className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${boardroomLang === 'en' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                                >
-                                    EN 🇬🇧
-                                </button>
-                                <button 
-                                    onClick={() => setBoardroomLang('ar')}
-                                    className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${boardroomLang === 'ar' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                                >
-                                    AR 🇸🇦
-                                </button>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {/* Voice auto-narration / manual override controls */}
+                                <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-lg">
+                                    <button
+                                        onClick={() => {
+                                            const nextVal = !isVoiceOutputEnabled;
+                                            setIsVoiceOutputEnabled(nextVal);
+                                            if (nextVal) {
+                                                speakLine("Voice synth activated.", "Asaad AI", null, true);
+                                            } else {
+                                                if ('speechSynthesis' in window) {
+                                                    window.speechSynthesis.cancel();
+                                                }
+                                            }
+                                        }}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${isVoiceOutputEnabled ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                                        title="Toggle text-to-speech auto-play"
+                                    >
+                                        {isVoiceOutputEnabled ? (
+                                            <>
+                                                <Volume2 className="w-3.5 h-3.5" />
+                                                <span>Voice ON</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                                                <span>Voice MUTED</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            speakLine("Cross functional sound board check active.", "Ahmed Al-Mansoori", null, true);
+                                        }}
+                                        className="px-1.5 py-1 text-slate-400 hover:text-slate-200 text-[9px] uppercase font-mono tracking-widest border border-slate-800 hover:border-slate-700 rounded transition-all"
+                                        title="Test speech engine output"
+                                    >
+                                        Test Audio
+                                    </button>
+                                </div>
+
+                                {/* Multilingual control */}
+                                <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-lg">
+                                    <button 
+                                        onClick={() => setBoardroomLang('en')}
+                                        className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${boardroomLang === 'en' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        EN 🇬🇧
+                                    </button>
+                                    <button 
+                                        onClick={() => setBoardroomLang('ar')}
+                                        className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${boardroomLang === 'ar' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        AR 🇸🇦
+                                    </button>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Active cross-functional respondent focus bar */}
+                        {designatedRespondent && (
+                            <div className="px-4 py-2 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between text-[11px] text-slate-300">
+                                <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-slate-400">
+                                    <span className="h-1.5 w-1.5 bg-purple-500 rounded-full animate-ping"></span>
+                                    Active Cross-Funct Respondent: <span className="text-purple-400 font-bold">{designatedRespondent.name}</span> <span className="text-slate-500">[{designatedRespondent.role}]</span>
+                                </span>
+                                <span className="text-[9px] text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 font-mono">
+                                    Direct Duty Assigned
+                                </span>
+                            </div>
+                        )}
 
                         <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                             {meetingLog.length === 0 && (
@@ -1674,7 +1793,7 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                                     <p className="text-xs uppercase tracking-widest font-normal">Strategic board meeting idle. Click compile baseline to assemble agents.</p>
                                     <button 
                                         onClick={() => runSimulationTurn()}
-                                        className="mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs uppercase font-bold"
+                                        className="mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs uppercase font-bold animate-pulse"
                                     >
                                         Initialize Meeting Session
                                     </button>
@@ -1684,24 +1803,56 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                             {meetingLog.map((log, idx) => {
                                 const agent = dynamicAgents.find(a => a.name === log.speaker);
                                 const isUser = log.speaker.startsWith("You");
+                                const isActivelySpeaking = speakingDialogIdx === idx;
                                 return (
                                     <div key={idx} className={`flex items-start gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-fade-in`}>
                                         {agent ? (
-                                            <img src={agent.avatarUrl} alt={agent.name} className="w-9 h-9 rounded-full object-cover border border-slate-700 mt-1" />
+                                            <div className="relative shrink-0">
+                                                <img src={agent.avatarUrl} alt={agent.name} className={`w-9 h-9 rounded-full object-cover border mt-1 transition-all ${isActivelySpeaking ? 'border-emerald-500 ring-2 ring-emerald-500/40 scale-105' : 'border-slate-700'}`} />
+                                                {isActivelySpeaking && (
+                                                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border border-slate-900 rounded-full animate-ping"></span>
+                                                )}
+                                            </div>
                                         ) : (
-                                            <div className="w-9 h-9 rounded-full bg-teal-900 flex items-center justify-center text-white text-xs mt-1">
+                                            <div className="w-9 h-9 rounded-full bg-teal-900 flex items-center justify-center text-white text-xs mt-1 shrink-0">
                                                 {isUser ? 'ME' : 'SYS'}
                                             </div>
                                         )}
                                         <div className={`flex flex-col max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <span className="text-[11px] font-semibold text-slate-400">{log.speaker}</span>
                                                 <span className="text-[9px] text-slate-500">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                
+                                                {/* Pulsing live cyber waves for active speech synthesis feedback */}
+                                                {isActivelySpeaking && (
+                                                    <div className="flex items-center gap-0.5 h-3 px-1.5 bg-emerald-950/60 border border-emerald-850 rounded-full animate-pulse ml-1">
+                                                        <span className="w-0.5 bg-emerald-400 animate-[pulse_0.4s_infinite] h-2"></span>
+                                                        <span className="w-0.5 bg-emerald-400 animate-[pulse_0.6s_infinite] h-3"></span>
+                                                        <span className="w-0.5 bg-emerald-400 animate-[pulse_0.3s_infinite] h-1.5"></span>
+                                                        <span className="w-0.5 bg-emerald-400 animate-[pulse_0.5s_infinite] h-2.5"></span>
+                                                        <span className="text-[8px] font-mono text-emerald-400 ml-1 uppercase">Speaking</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className={`p-3 rounded-2xl text-[13px] md:text-xs leading-relaxed mt-1 ${isUser ? 'bg-teal-950/40 border border-teal-800 text-teal-100' : 'bg-slate-800/80 border border-slate-700 text-slate-100'}`}>
-                                                <p className={boardroomLang === 'ar' ? 'font-arabic text-right' : 'text-left'} dir={boardroomLang === 'ar' ? 'rtl' : 'ltr'}>
-                                                    {boardroomLang === 'ar' ? (log.message_ar || log.message_en) : log.message_en}
-                                                </p>
+                                            
+                                            <div className="relative group mt-1">
+                                                <div className={`p-3 rounded-2xl text-[13px] md:text-xs leading-relaxed ${isUser ? 'bg-teal-950/40 border border-teal-800 text-teal-100' : 'bg-slate-800/80 border border-slate-700 text-slate-100'} ${isActivelySpeaking ? 'ring-1 ring-emerald-500 bg-slate-800' : ''}`}>
+                                                    <p className={boardroomLang === 'ar' ? 'font-arabic text-right' : 'text-left'} dir={boardroomLang === 'ar' ? 'rtl' : 'ltr'}>
+                                                        {boardroomLang === 'ar' ? (log.message_ar || log.message_en) : log.message_en}
+                                                    </p>
+                                                    
+                                                    {/* Directly embedded Audio trigger bypass button to ensure perfect compliance in restricted iframes */}
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => speakLine(log, log.speaker, idx, true)}
+                                                            className="p-1 rounded bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-300 transition-colors shadow-lg flex items-center gap-1 scale-90"
+                                                            title="Play/Hear voice output immediately (bypasses browser autoplay limits)"
+                                                        >
+                                                            <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                                                            <span className="text-[8px] font-bold uppercase tracking-wider pr-1">Hear</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1759,6 +1910,8 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                                     e.preventDefault();
                                     const text = (e.currentTarget.elements.namedItem('chatIn') as HTMLInputElement).value;
                                     if (text.trim()) {
+                                        // Synchronously trigger a silent check to keep Speech Synthesis active in gesture handler
+                                        speakLine("Taking question", "System", null, false);
                                         handleUserSpeak(text.trim());
                                         e.currentTarget.reset();
                                     }

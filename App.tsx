@@ -509,6 +509,7 @@ export default function App() {
   const handleGeneratePolicyWithAI = async (control: Control, subdomain: Subdomain, domain: Domain, tone: PolicyTone, length: PolicyLength) => {
       if (!company) return;
       
+      const isArabic = language === 'ar';
       const prompt = `
         Generate a comprehensive cybersecurity policy document for the following control:
         Control ID: ${control.id}
@@ -522,6 +523,7 @@ export default function App() {
         
         Tone: ${tone}
         Length: ${length}
+        Language: ${isArabic ? 'Professional, formal ARABIC (اللغة العربية الفصحى). The output must be written entirely in beautiful, formal regulatory Arabic, translating all conceptual framework procedures correctly.' : 'English'}
         
         Format as JSON with keys: 'policy', 'procedure', 'guideline'. Content should be Markdown.
       `;
@@ -605,6 +607,13 @@ export default function App() {
           }
           return doc;
       }));
+  };
+
+  const handleUpdateDocument = (updatedDoc: PolicyDocument) => {
+      if (!company) return;
+      setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? updatedDoc : d));
+      dbAPI.updateDocument(company.id, updatedDoc);
+      handleAddAuditLog('DOCUMENT_CRYPTOGRAPHIC_SEAL', `Cryptographic seal or encryption state updated for document ${updatedDoc.controlId}`);
   };
 
   // --- Render ---
@@ -794,8 +803,10 @@ export default function App() {
                     currentUser={currentUser} 
                     onApprovalAction={handleApprovalAction} 
                     onAddDocument={handleAddDocument}
+                    onUpdateDocument={handleUpdateDocument}
                     permissions={permissions}
                     company={company}
+                    language={language}
                 />
             )}
             {currentView === 'companyProfile' && (
