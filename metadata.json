@@ -1,0 +1,10 @@
+{
+  "name": "Remix: Multi Framework Compliance Navigator",
+  "description": "An interactive enterprise GRC platform with collaborative workspaces, AI-powered compliance auditing, and multi-agent cybersecurity department simulation.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
