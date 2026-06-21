@@ -302,7 +302,7 @@ export const TrainingAssistant: React.FC<TrainingAssistantProps> = ({ isOpen, on
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl flex flex-col" style={{height: '85vh', maxHeight: '800px'}}>
                  <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                      <div className="flex items-center">
-                        <img src={nooraAvatar} alt="Noora" className="w-10 h-10 rounded-full mr-3" />
+                        <img src={nooraAvatar} alt="Noora" className="w-8 h-8 rounded-full mr-3" />
                         <div>
                             <h2 className="font-normal text-lg text-gray-800 dark:text-gray-100">AI Training Mentor</h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400">Live Voice Assistant</p>

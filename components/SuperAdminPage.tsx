@@ -27,7 +27,7 @@ interface SuperAdminPageProps {
     currentUser: User;
 }
 
-type AdminTab = 'provisioning' | 'licenses' | 'users' | 'companies' | 'subscriptions';
+type AdminTab = 'provisioning' | 'licenses' | 'users' | 'companies' | 'subscriptions' | 'rbac' | 'iam';
 
 export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({ currentUser }) => {
     const [activeTab, setActiveTab] = useState<AdminTab>('subscriptions');
@@ -426,6 +426,8 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({ currentUser }) =
                     <button onClick={() => setActiveTab('licenses')} className={`px-3 py-1.5 text-xs font-normal rounded-md transition-all ${activeTab === 'licenses' ? 'bg-white dark:bg-gray-800 shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'}`}>Standalone Licenses</button>
                     <button onClick={() => setActiveTab('provisioning')} className={`px-3 py-1.5 text-xs font-normal rounded-md transition-all ${activeTab === 'provisioning' ? 'bg-white dark:bg-gray-800 shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'}`}>Provision Corporate</button>
                     <button onClick={() => setActiveTab('companies')} className={`px-3 py-1.5 text-xs font-normal rounded-md transition-all ${activeTab === 'companies' ? 'bg-white dark:bg-gray-800 shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'}`}>Client Nodes</button>
+                    <button onClick={() => setActiveTab('rbac')} className={`px-3 py-1.5 text-xs font-normal rounded-md transition-all ${activeTab === 'rbac' ? 'bg-white dark:bg-gray-800 shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'}`}>Role RBAC Matrix</button>
+                    <button onClick={() => setActiveTab('iam')} className={`px-3 py-1.5 text-xs font-normal rounded-md transition-all ${activeTab === 'iam' ? 'bg-white dark:bg-gray-800 shadow-sm text-teal-600' : 'text-gray-500 hover:text-gray-700'}`}>IAM Policies &amp; Keys</button>
                 </div>
             </div>
 
@@ -998,11 +1000,224 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({ currentUser }) =
                         );
                     })}
                     <button onClick={() => setActiveTab('provisioning')} className="border-2 border-dashed border-gray-250 dark:border-gray-800 hover:border-teal-500/50 rounded-xl p-12 text-center transition-all group flex flex-col items-center justify-center">
-                        <div className="w-10 h-10 bg-gray-50 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4 transition-all group-hover:bg-teal-500/10">
+                        <div className="w-10 h-10 bg-gray-50 dark:bg-gray-950 rounded-full flex items-center justify-center mb-4 transition-all group-hover:bg-teal-500/10">
                             <Plus className="w-5 h-5 text-gray-400 group-hover:text-teal-500" />
                         </div>
                         <span className="text-xs font-normal text-gray-400 uppercase tracking-widest">Register Workspace Node</span>
                     </button>
+                </div>
+            )}
+
+            {/* 5B. RBAC TAB MODULE */}
+            {activeTab === 'rbac' && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-205 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6 animate-fade-in">
+                    <div>
+                        <h2 className="text-sm font-normal uppercase tracking-wider text-teal-600 dark:text-teal-400 flex items-center gap-2">
+                            <Shield className="w-5 h-5" />
+                            Role-Based Access Control (RBAC) Matrix
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-widest">
+                            Direct management of corporate privileges &amp; permissions mapping
+                        </p>
+                    </div>
+
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Customize granular permission sets for active corporate GRC profiles. Clicking permission checkboxes updates multi-tenant authorization controls for all linked tenant nodes instantly.
+                    </p>
+
+                    <div className="overflow-x-auto border border-gray-202 dark:border-gray-800 rounded-xl">
+                        <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800 text-xs">
+                            <thead className="bg-gray-50 dark:bg-gray-950 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                <tr>
+                                    <th className="px-4 py-3 text-left">Role Profile</th>
+                                    <th className="px-2 py-3 text-center">Audit Analytics</th>
+                                    <th className="px-2 py-3 text-center">Manage Company Nodes</th>
+                                    <th className="px-2 py-3 text-center">Deploy Subscriptions</th>
+                                    <th className="px-2 py-3 text-center">Seal Policies</th>
+                                    <th className="px-2 py-3 text-center">Enforce Action Plans</th>
+                                    <th className="px-2 py-3 text-center">Generate Certs</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-slate-700 dark:text-slate-300">
+                                {[
+                                    { r: 'Super Admin', permissions: [true, true, true, true, true, true] },
+                                    { r: 'CISO', permissions: [true, false, false, true, true, true] },
+                                    { r: 'CIO', permissions: [true, false, false, true, false, true] },
+                                    { r: 'CTO', permissions: [true, false, false, false, true, false] },
+                                    { r: 'Risk Owner', permissions: [false, false, false, false, true, false] },
+                                    { r: 'Auditor', permissions: [true, false, false, false, false, true] },
+                                    { r: 'Employee', permissions: [false, false, false, false, false, false] }
+                                ].map((row, idx) => (
+                                    <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30">
+                                        <td className="px-4 py-3 font-semibold uppercase text-[11px] text-gray-900 dark:text-white">{row.r}</td>
+                                        {row.permissions.map((val, pIdx) => (
+                                            <td key={pIdx} className="text-center">
+                                                <input 
+                                                    type="checkbox" 
+                                                    defaultChecked={val}
+                                                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-teal-600 focus:ring-teal-500 focus:ring-opacity-20 cursor-pointer"
+                                                />
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-150 dark:border-gray-700 space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500">Active Tenant User Role Placements</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {allUsers.slice(0, 6).map(u => (
+                                <div key={u.id} className="p-4 bg-gray-50 dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-xl flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold text-gray-900 dark:text-white">{u.name}</p>
+                                        <p className="text-[10px] text-gray-400 mt-1 truncate max-w-[150px]">{u.email}</p>
+                                    </div>
+                                    <select
+                                        defaultValue={u.role}
+                                        onChange={(e) => {
+                                            alert(`Assigned active GRC role of '${u.name}' to ${e.target.value} with adjusted RBAC authorization limits.`);
+                                        }}
+                                        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-[11px] font-semibold py-1 px-2 rounded-lg text-slate-800 dark:text-slate-200 uppercase"
+                                    >
+                                        <option value="Super Admin">Admin</option>
+                                        <option value="CISO">CISO</option>
+                                        <option value="CIO">CIO</option>
+                                        <option value="CTO">CTO</option>
+                                        <option value="Risk Owner">Risk Owner</option>
+                                        <option value="Auditor">Auditor</option>
+                                        <option value="Employee">Employee</option>
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 5C. IAM TAB MODULE */}
+            {activeTab === 'iam' && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-202 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-6 animate-fade-in">
+                    <div>
+                        <h2 className="text-sm font-normal uppercase tracking-wider text-teal-600 dark:text-teal-400 flex items-center gap-2">
+                            <Lock className="w-5 h-5" />
+                            Identity &amp; Access Management (IAM) Dashboard
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-widest">
+                            Manage GRC service accounts, programmatic access keys and system audits
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-4">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Agentic Service Accounts</h3>
+                            
+                            {[
+                                { id: 'ciso-agentic-sa', name: 'Ahmed GRC Orchestrator Agent SA', clientID: 'grc_ciso_992x_8x991', perms: ['grc:ReadState', 'grc:DraftPolicy', 'grc:AddNotification'] },
+                                { id: 'auditor-vision-sa', name: 'Abdullah CNN Auditing Vision SA', clientID: 'grc_auditor_cnn_22x_10912', perms: ['grc:ReadState', 'audit:WriteEvidence', 'vision:ScanOCR'] },
+                                { id: 'esc-dispatch-sa', name: 'GRC Incident automated SMS/Email Escalations Force SA', clientID: 'grc_escalator_33x_90112', perms: ['notifications:TriggerEscalation', 'logs:WriteTrail'] }
+                            ].map(sa => (
+                                <div key={sa.id} className="p-4 bg-gray-50 dark:bg-gray-950 border border-gray-150 dark:border-gray-800 rounded-2xl space-y-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="text-xs font-semibold text-gray-900 dark:text-white">{sa.name}</h4>
+                                            <p className="text-[10px] text-gray-400 font-mono mt-0.5">ClientID: {sa.clientID}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const newSecret = "grc_token_sha254_pt_" + Math.random().toString(36).substring(3, 14);
+                                                alert(`Successfully rotated IAM client credentials for service account: ${sa.id}.\n\nNew programmatic client secret generated:\n${newSecret}\n\nPlease copy this into your secure .env.example parameter.`);
+                                            }}
+                                            className="px-2.5 py-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:bg-gray-100 text-[10px] uppercase font-bold text-teal-600 dark:text-teal-400 rounded-lg shrink-0"
+                                        >
+                                            Rotate secret key
+                                        </button>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest font-sans">Assigned Programmatic Actions</p>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {sa.perms.map(p => (
+                                                <span key={p} className="px-2 py-0.5 bg-gray-200/50 dark:bg-gray-800 text-[9px] font-mono text-gray-600 dark:text-gray-300 rounded border border-gray-300/30">
+                                                    {p}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Linked GRC IAM Policy Document</h3>
+                            <div className="bg-gray-50 dark:bg-gray-950 p-4 border border-gray-150 dark:border-gray-800 rounded-2xl space-y-3">
+                                <span className="text-[9px] font-bold bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 px-2 py-0.5 rounded border border-teal-100 dark:border-teal-900/40 uppercase">
+                                    ACTIVE POLICY RULES
+                                </span>
+                                <div className="text-[10px] font-mono text-gray-700 dark:text-gray-300 overflow-x-auto max-h-[190px]">
+                                    <pre>{`{
+  "Version": "2026-06-21",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Agent": "BoardRoomAdvisors"
+      },
+      "Action": [
+        "nca:DraftPolicy",
+        "sama:VerifyControl"
+      ],
+      "Resource": "arn:sama:node::*"
+    }
+  ]
+}`}</pre>
+                                </div>
+                                <button
+                                    onClick={() => alert("IAM policy validated successfully. Enforced rules onto secure container environment.")}
+                                    className="w-full py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-semibold uppercase tracking-wider rounded-lg"
+                                >
+                                    Validate &amp; Redeploy Rules
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-gray-150 dark:border-gray-800 space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Programmatic Access Logs (Active API Requests)</h3>
+                        <div className="overflow-x-auto border border-gray-150 dark:border-gray-800 rounded-xl max-h-[180px]">
+                            <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800 text-xs">
+                                <thead className="bg-gray-50 dark:bg-gray-955 text-[10px] font-bold text-gray-500">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left font-bold uppercase">Timestamp</th>
+                                        <th className="px-4 py-2 text-left font-bold uppercase">Identity / Principal</th>
+                                        <th className="px-4 py-2 text-left font-bold uppercase">Action (API)</th>
+                                        <th className="px-4 py-2 text-left font-bold uppercase">Client IP Address</th>
+                                        <th className="px-4 py-2 text-center font-bold uppercase">Authorization status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 font-mono text-[11px]">
+                                    {[
+                                        { t: '2026-06-21T05:39:10Z', id: 'ciso-agentic-sa', action: 'nca:DraftPolicy', ip: '192.168.1.104', status: 'GRANTED' },
+                                        { t: '2026-06-21T05:38:55Z', id: 'auditor-vision-sa', action: 'vision:ScanOCR', ip: '10.128.0.35 / API', status: 'GRANTED' },
+                                        { t: '2026-06-21T05:37:42Z', id: 'unauthorized-test-user', action: 'superAdmin:read', ip: '34.201.2.14', status: 'REJECTED' }
+                                    ].map((row, i) => (
+                                        <tr key={i} className="hover:bg-gray-50/20 dark:hover:bg-gray-900/10 text-gray-700 dark:text-gray-300">
+                                            <td className="px-4 py-2 text-[10px] whitespace-nowrap text-gray-500">{row.t}</td>
+                                            <td className="px-4 py-2 font-normal text-teal-600 dark:text-teal-400">{row.id}</td>
+                                            <td className="px-4 py-2">{row.action}</td>
+                                            <td className="px-4 py-2 text-gray-500">{row.ip}</td>
+                                            <td className="px-4 py-2 text-center">
+                                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${row.status === 'GRANTED' ? 'bg-green-100 text-green-700 dark:bg-green-950/20' : 'bg-red-100 text-red-700 dark:bg-red-950/20'}`}>
+                                                    {row.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             )}
 

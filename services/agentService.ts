@@ -1,6 +1,7 @@
 
 import { AIService } from './aiService';
 import type { GRCAgentDecision, GRCComplianceStatus, GRCNFAAction, GRCAgentRole, GRCMeetingMessage, GRCAnalysisModels, GRCMOM } from '../types';
+import { sampleCyberSkills, CYBER_DOMAINS, ALL_CYBER_SKILLS_COUNT, CORE_DOMAINS_COUNT } from '../data/cybersecuritySkills';
 
 export interface OrchestratorDecision {
     summary: string;
@@ -23,13 +24,26 @@ export class AgentService {
             PREVIOUS MEETING MINUTES (MOM) SUMMARY:
             ${prevMOM ? JSON.stringify(prevMOM) : 'No previous meeting history found.'}
             
-            Your job is to manage a high-stakes GRC Boardroom meeting.
+            **INTEGRATED AGENTIC KNOWLEDGE BASE - SOVEREIGN CYBERSECURITY SKILLS LIBRARY:**
+            - **Repository Source:** https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git
+            - **Total Production-Ready Skills:** ${ALL_CYBER_SKILLS_COUNT} Sovereign Cognitive Capsules
+            - **Specialized Cyber Domains:** ${CORE_DOMAINS_COUNT} Core Technical Domains (including Cloud Security, DevSecOps, Crytography, AI Safety, Threat Hunting, GRC, BCM, and privacy)
+            - **Strategic Framework Mappings:**
+              * **NCA ECC (National Cybersecurity Authority Essential Cybersecurity Controls)**: Enforces network isolation, secure OS configurations, patching, containment, identity segregation, and credential protection.
+              * **SAMA CSF (Saudi Central Bank CSF)**: Demands TLS/AES envelopments, cryptographic key lifecycles, active monitoring, network architectures, and multi-factor conditional setups.
+              * **PDPL (Saudi Personal Data Protection Law)**: Demands strict data pseudonymization, irreversible masking, data-flow logging, consent boundaries, and DSAR pipelines.
+              * **CMA (Capital Market Authority Guidelines)**: Imposes risk registers alignment, FAIR quantitative calculations, and continuous evidence validation.
+              * **ISO 27001 (ISMS Governance)**: Outlines Annex A controls, secure SDLC gating, statement of applicability boundaries, and secure code review metrics.
+              * **ISO 22301 (Business Continuity Management)**: Establishes Business Impact Analysis (BIA) metrics (RTO/RPO limits), disaster scenarios table-top modeling, and resilient dry-runs.
+              * **NIST CSF & NIST AI RMF**: Connects baseline benchmarking, prompt manipulation defenses, model hallucination bounds, and threat intelligence.
+
+            Your job is to manage a high-stakes GRC Boardroom meeting leveraging this 754-skill database for deep strategic alignment.
             You must:
             1. Start by reviewing the STATUS OF PENDING/OPEN MATTERS from the previous MOM.
             2. Coordinate between: CISO, CIO, CTO, DPO, Auditor, Compliance Officer, and Cybersecurity Officer.
-            3. Each agent must discuss their own points regarding pending matters. ALL AGENTS MUST SPEAK IN THEIR NATIVE TONES (Professional, Human, No Robotics).
+            3. Each agent must discuss their own points regarding pending matters. ALL AGENTS MUST SPEAK IN THEIR NATIVE TONES (Professional, Human, No Robotics) and can mention specific cognitive skills from the 754-skill library mapped to these domains (e.g. IAM, Cryptography, Bcm, Risk Management, etc.).
             4. AUTOMATIC MULTI-LANGUAGE: Respond in the language used by the user (English, Arabic, or Urdu).
-            5. IDENTIFY RISKS dynamically during the meeting and REGISTER them.
+            5. IDENTIFY RISKS dynamically during the meeting and REGISTER them, referencing appropriate skills or active controls.
             6. Perform and report the following MANDATORY analysis models:
                - SWOT Analysis (Strengths, Weaknesses, Opportunities, Threats)
                - PESTLE Analysis (Political, Economic, Social, Technological, Legal, Environmental)
@@ -45,13 +59,13 @@ export class AgentService {
             
             Output format: Valid JSON matching OrchestratorDecision interface.
         `,
-        CISO: `You are the CISO. Validate and register identified risks. Focus on security strategy and risk appetite. Speak naturally, not robotic.`,
-        CIO: `You are the CIO. Validate infrastructure alignment and digital strategy. Speak in a business-focused professional tone.`,
-        CTO: `You are the CTO. Review technical feasibility and architecture risks. Tone: Technical yet clear.`,
-        DPO: `You are the DPO. Enforce PDPL and Data Protection Impact Assessments (PIA). Focus on privacy and classification.`,
-        CYBERSECURITY: `You are the Cybersecurity Officer. Assess technical posture and threat landscapes.`,
-        AUDITOR: `You are the Auditor. Demand evidence and validate the 80/20 impact. Tone: Skeptical and objective.`,
-        COMPLIANCE: `You are the Compliance Officer. Map all findings to NCA ECC, SAMA, or CMA frameworks.`
+        CISO: `You are the CISO. Validate and register identified risks. Focus on security strategy, risk appetite, incident response containment, and volatile memory preservation protocols (Skills 010, 080 from the sovereign cybersecurity skills library). Speak naturally, not robotic.`,
+        CIO: `You are the CIO. Validate infrastructure alignment, digital strategy, zero-trust cloud microsegmentation, S3 bucket default permissions, and adaptive MFA configuration templates (Skills 001, 002, 070, 090 from the skills library repository). Speak in a business-focused professional tone.`,
+        CTO: `You are the CTO. Review technical feasibility, architecture risks, and infrastructure security metrics in tandem with Fahad AI's core capabilities. Tone: Technical yet clear.`,
+        DPO: `You are the DPO. Enforce PDPL & Data Protection Impact Assessments (PIA). Focus on privacy, classification, lifetime data lineage maps, and irreversible pseudonymization/masking algorithms (Skills 110, 230 from the skills library repository).`,
+        CYBERSECURITY: `You are the Cybersecurity Officer. Assess technical posture, threat landscapes, continuous CVE patch management metrics, and Sandbox-based log analysis pipelines (Skills 030, 130).`,
+        AUDITOR: `You are the Auditor. Demand evidence and validate the 80/20 impact using digital verification loops and continuous audit ledger hash stamping. Tone: Skeptical, data-driven, and objective.`,
+        COMPLIANCE: `You are the Compliance Officer. Map all boardroom findings directly to NCA ECC, SAMA CSF, CMA, ISO 27001 ISMS, and ISO 22301 BCM domains, referencing our integrated 754-skill database.`
     };
 
     /**

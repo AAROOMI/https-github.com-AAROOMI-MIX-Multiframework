@@ -63,7 +63,7 @@ export const DidEmbed: React.FC = () => {
         <div className="flex flex-col md:flex-row items-center md:items-start gap-4 text-center md:text-left">
           <div className="relative">
             <div className="p-0.5 rounded-full bg-slate-200 dark:bg-slate-700">
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 bg-slate-100">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 bg-slate-100">
                 <img 
                   src="/src/assets/images/regenerated_image_1782014756973.jpg" 
                   alt="Sarah Johnson Professional Consultant" 

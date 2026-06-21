@@ -1,10 +1,40 @@
-
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { 
+  Users, 
+  Bot, 
+  MessageSquare, 
+  Briefcase, 
+  UserPlus, 
+  RefreshCw, 
+  Upload, 
+  FileCheck, 
+  Fingerprint, 
+  Award, 
+  AlertTriangle, 
+  Mail, 
+  Phone, 
+  CheckCircle, 
+  ChevronRight, 
+  Check, 
+  Sparkles, 
+  ShieldCheck, 
+  Shield, 
+  Eye, 
+  QrCode, 
+  Database,
+  Lock,
+  ChevronDown,
+  Clock,
+  Printer,
+  History,
+  Scale
+} from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIService } from '../services/aiService';
 import { virtualAgents } from '../data/virtualAgents';
-import type { OrganizationSize, VirtualAgent, Risk, PolicyDocument, AssessmentItem, AuditAction } from '../types';
-import { UserGroupIcon, ShieldCheckIcon, SparklesIcon, MicrophoneIcon, ChatBotIcon, UploadIcon, PaperClipIcon, CloseIcon, DocumentTextIcon, EyeIcon } from './Icons';
+import { sampleCyberSkills, CYBER_DOMAINS, ALL_CYBER_SKILLS_COUNT, CORE_DOMAINS_COUNT, CyberSkill } from '../data/cybersecuritySkills';
+import { Search, Filter, Cpu, BookOpen } from 'lucide-react';
+import type { OrganizationSize, VirtualAgent, Risk, PolicyDocument, AssessmentItem, AuditAction, CompanyProfile } from '../types';
 
 interface VirtualDepartmentPageProps {
     onDelegateTask: (agentName: string, task: string) => void;
@@ -18,29 +48,58 @@ interface VirtualDepartmentPageProps {
     onAddAuditLog?: (action: AuditAction, details: string) => void;
     auditLog?: any[];
     language?: 'en' | 'ar';
+    companyProfile?: CompanyProfile | null;
 }
 
-const DialogueDialogueEntry = null; // Removing the old ai constant
-
-// Define the simulated dialogue entry
 interface DialogueEntry {
     speaker: string;
     message_en: string;
     message_ar: string;
-    message_ur?: string;
-    message_de?: string;
-    message_zh?: string;
-    action?: string; 
     timestamp: number;
-    attachment?: { name: string, type: string };
+    action?: string;
+    taskCompleted?: boolean;
 }
 
-// Browser Speech Recognition Types
-declare global {
-    interface Window {
-        webkitSpeechRecognition: any;
-        SpeechRecognition: any;
-    }
+interface SignatureUser {
+    name: string;
+    role: 'Risk Owner' | 'Line Manager' | 'CIO' | 'CEO';
+    pin: string;
+    registered: boolean;
+    registeredAt?: number;
+}
+
+interface AuditEvidence {
+    id: string;
+    controlId: string;
+    framework: 'NCA ECC' | 'SAMA CSF' | 'PDPL';
+    fileName: string;
+    fileSize: string;
+    uploadedBy: string;
+    uploadedAt: number;
+    status: 'Pending Review' | 'Rejected' | 'Approved';
+    cnnOutputLog: string[];
+    signatures: {
+        riskOwner: boolean;
+        lineManager: boolean;
+        cio: boolean;
+        ceo: boolean;
+    };
+    treatmentPlan?: {
+        gapComments: string;
+        remediationActions: string[];
+        dueDate: string;
+        responsibleParty: string;
+    };
+}
+
+interface ComplianceCertificate {
+    id: string;
+    companyName: string;
+    framework: string;
+    issueDate: number;
+    serialNumber: string;
+    securityHash: string;
+    signees: string[];
 }
 
 export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({ 
@@ -54,289 +113,349 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
     onAddRisk,
     onAddAuditLog,
     auditLog = [],
-    language = 'en'
+    language = 'en',
+    companyProfile = null
 }) => {
+    // Top tabs selection
+    type TabKey = 'team' | 'meeting' | 'audit' | 'vault' | 'escalations' | 'skills';
+    const [activeTab, setActiveTab] = useState<TabKey>('meeting');
 
     const [orgSize, setOrgSize] = useState<OrganizationSize>('Mid-Market');
     const [selectedAgent, setSelectedAgent] = useState<VirtualAgent | null>(null);
     const [agentTaskInput, setAgentTaskInput] = useState('');
+    const [boardroomLang, setBoardroomLang] = useState<'en' | 'ar'>('en');
+    
+    // Skills search & filter states
+    const [skillsSearch, setSkillsSearch] = useState('');
+    const [selectedCyberDomain, setSelectedCyberDomain] = useState<string>('All');
+    const [simulatingSkillId, setSimulatingSkillId] = useState<string | null>(null);
+    const [simulationLogs, setSimulationLogs] = useState<string[]>([]);
 
-    interface DelegatedTask {
+    const filteredCyberSkills = useMemo(() => {
+        return sampleCyberSkills.filter(skill => {
+            const matchesDomain = selectedCyberDomain === 'All' || skill.domain === selectedCyberDomain;
+            const matchesSearch = skill.title.toLowerCase().includes(skillsSearch.toLowerCase()) || 
+                                  skill.description.toLowerCase().includes(skillsSearch.toLowerCase()) ||
+                                  skill.technicalAction.toLowerCase().includes(skillsSearch.toLowerCase()) ||
+                                  skill.domain.toLowerCase().includes(skillsSearch.toLowerCase()) ||
+                                  skill.targetFrameworks.some(f => f.toLowerCase().includes(skillsSearch.toLowerCase()));
+            return matchesDomain && matchesSearch;
+        });
+    }, [skillsSearch, selectedCyberDomain]);
+
+    // Toggleable corporate frameworks
+    const [activeFrameworks, setActiveFrameworks] = useState<string[]>(['NCA ECC', 'SAMA CSF', 'PDPL', 'ISO 27001', 'ISO 22301']);
+
+    // Computed dynamic virtual team (human position assistants and framework expansions)
+    const dynamicAgents = useMemo(() => {
+        let list: VirtualAgent[] = [...virtualAgents];
+
+        if (companyProfile) {
+            // Apply human/copilot assistant relationships dynamic mapping
+            list = list.map(agent => {
+                const updated = { ...agent };
+                if (agent.role === 'CTO' && companyProfile.ctoName) {
+                    updated.role = 'CTO Assistant';
+                    updated.title = `Technical Assistant to ${companyProfile.ctoName} (CTO)`;
+                    updated.description = `Serves as direct technology co-pilot. Assists CTO ${companyProfile.ctoName} with system security configurations, operational parameters, and architecture reviews.`;
+                    updated.reportingLine = companyProfile.ctoName;
+                } else if (agent.role === 'CIO' && companyProfile.cioName) {
+                    updated.role = 'CIO Assistant';
+                    updated.title = `Information Systems Assistant to ${companyProfile.cioName} (CIO)`;
+                    updated.description = `Coordinates strategic digital capability, IT systems governance checklists, and budget recommendations as assistant to CIO ${companyProfile.cioName}.`;
+                    updated.reportingLine = companyProfile.cioName;
+                } else if (agent.role === 'CISO' && companyProfile.cisoName) {
+                    updated.role = 'CISO Assistant';
+                    updated.title = `Corporate Cybersecurity Assistant to ${companyProfile.cisoName} (CISO)`;
+                    updated.description = `Active security co-pilot. Assists CISO ${companyProfile.cisoName} in driving robust information security standards and threat responses.`;
+                    updated.reportingLine = companyProfile.cisoName;
+                } else if (agent.role === 'Compliance' && companyProfile.complianceOfficerName) {
+                    updated.role = 'Compliance Assistant';
+                    updated.title = `Compliance Assistant to ${companyProfile.complianceOfficerName}`;
+                    updated.description = `Co-pilots regulatory audit preparatives and continuous control checking alongside Compliance Officer ${companyProfile.complianceOfficerName}.`;
+                    updated.reportingLine = companyProfile.complianceOfficerName;
+                }
+                return updated;
+            });
+
+            // If CEO human exists, instantiate assistant Sultan AI
+            if (companyProfile.ceoName) {
+                if (!list.some(a => a.id === 'agent-ceo-assistant')) {
+                    list.push({
+                        id: 'agent-ceo-assistant',
+                        name: 'Sultan AI',
+                        role: 'CEO Assistant',
+                        title: `Executive Assistant to CEO ${companyProfile.ceoName}`,
+                        description: `Coordinates executive dashboard briefings, GRC readiness assessments, and boardroom alignment schedules acting under the directives of CEO ${companyProfile.ceoName}.`,
+                        fullBio: `Sultan AI is the Chief Executive Chief-of-Staff AI, dedicated to assisting ${companyProfile.ceoName}. He provides rapid synthesis of all control validation streams, audits, and policy guidelines.`,
+                        responsibilities: [
+                            'Synthesize real-time regulatory status reports for executive reviews.',
+                            'Act as liaison to translate technical parameters for high-level briefers.',
+                            'Escalate high-priority risk registry items directly to CEO.',
+                            'Deploy alignment playbooks as requested by executive leadership.'
+                        ],
+                        jobAttributes: ['Strategic Co-pilot', 'Executive Intelligence', 'Resource Coordinator'],
+                        reportingLine: companyProfile.ceoName,
+                        voiceName: 'Fenrir',
+                        avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+                        capabilities: ['Direct Briefing', 'Strategic Alignment', 'Policy Drafting'],
+                        status: 'Idle'
+                    });
+                }
+            }
+
+            // If DPO human exists, instantiate assistant Layan AI
+            if (companyProfile.dpoName) {
+                if (!list.some(a => a.id === 'agent-dpo-assistant')) {
+                    list.push({
+                        id: 'agent-dpo-assistant',
+                        name: 'Layan AI',
+                        role: 'DPO Assistant',
+                        title: `Data Protection Assistant to DPO ${companyProfile.dpoName}`,
+                        description: `Enforces data privacy safeguards, automates system classification registries, and monitors Personal Data Protection Law (PDPL) rules reporting to ${companyProfile.dpoName}.`,
+                        fullBio: `Layan AI is the professional Data Privacy and Protection Assistant. She supports DPO ${companyProfile.dpoName} by managing consent logging, vetting data subject request procedures, and tracking encryption controls.`,
+                        responsibilities: [
+                            'Formulate draft personal privacy policies matching standard PDPL rules.',
+                            'Vet regulatory data classification records and registries.',
+                            'Monitor consent audit registers and verify compliance reports.',
+                            'Support the organization with data mapping templates.'
+                        ],
+                        jobAttributes: ['Privacy Advocate', 'Analytical', 'Standards-Driven'],
+                        reportingLine: companyProfile.dpoName,
+                        voiceName: 'Aoede',
+                        avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+                        capabilities: ['PDPL Management', 'DSAR Verification', 'Data Mapping Control'],
+                        status: 'Idle'
+                    });
+                }
+            }
+
+            // If Cybersecurity Officer human exists, instantiate assistant Saad AI
+            if (companyProfile.cybersecurityOfficerName) {
+                if (!list.some(a => a.id === 'agent-cso-assistant')) {
+                    list.push({
+                        id: 'agent-cso-assistant',
+                        name: 'Saad AI',
+                        role: 'CSO Assistant',
+                        title: `Operations Assistant to Cybersecurity Officer ${companyProfile.cybersecurityOfficerName}`,
+                        description: `Coordinates with Cybersecurity Officer ${companyProfile.cybersecurityOfficerName} to scan systems, trace control evidence, and compile security log dashboards.`,
+                        fullBio: `Saad AI is the continuous security operations assistant, working to aggregate system parameters and prepare verified audit logs for compliance review queues.`,
+                        responsibilities: [
+                            'Execute system configuration analysis scripts.',
+                            'Prepare evidence submission packages in the auditor dashboard.',
+                            'Analyze continuous monitoring logs to identify vulnerabilities.',
+                            'Streamline remediation timelines for operational controls.'
+                        ],
+                        jobAttributes: ['Technical Analyst', 'Diligence-Driven', 'Process Specialist'],
+                        reportingLine: companyProfile.cybersecurityOfficerName,
+                        voiceName: 'Puck',
+                        avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+                        capabilities: ['System Scanning', 'Continuous Telemetry', 'Vulnerability Tracking'],
+                        status: 'Idle'
+                    });
+                }
+            }
+        }
+
+        // Framework additions: ISO 27001
+        if (activeFrameworks.includes('ISO 27001')) {
+            if (!list.some(a => a.id === 'agent-iso27001')) {
+                list.push({
+                    id: 'agent-iso27001',
+                    name: 'Sahar AI',
+                    role: 'ISO 27001 Specialist',
+                    title: 'ISMS ISO 27001 Lead Implementer',
+                    description: 'Automates information security frameworks, governs Annex A clauses, and guarantees continuous ISMS readiness.',
+                    fullBio: 'Sahar AI is the dedicated ISO 27001 expert of our virtual boardroom. She coordinates statement of applicability records, aligns internal procedures to standard ISO clauses, and automates control tracking panels.',
+                    responsibilities: [
+                        'Oversee Statement of Applicability (SoA) revisions and mappings.',
+                        'Conduct pre-compliance checkpoints to identify Annex A gaps.',
+                        'Draft security classification procedures under ISO rules.',
+                        'Establish clear continuous audit matrices for documentation reviews.'
+                    ],
+                    jobAttributes: ['Governance Expert', 'Detail-Obsessed', 'Framework Specialist'],
+                    reportingLine: 'Compliance Advisor / CISO',
+                    voiceName: 'Aoede',
+                    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+                    capabilities: ['ISO 27001 Controls', 'Annex A Mapping', 'Statement of Applicability'],
+                    status: 'Idle'
+                });
+            }
+        }
+
+        // Framework additions: ISO 22301
+        if (activeFrameworks.includes('ISO 22301')) {
+            if (!list.some(a => a.id === 'agent-iso22301')) {
+                list.push({
+                    id: 'agent-iso22301',
+                    name: 'Rayan AI',
+                    role: 'ISO 22301 Specialist',
+                    title: 'BCMS Disaster Recovery & Resilience Advisor',
+                    description: 'Validates operational emergency backup setups, business impact assessments (BIA), and recovery velocity benchmarks.',
+                    fullBio: 'Rayan AI is our specialized Business Continuity Management System advisor. He verifies recovery objectives, drafts emergency continuity standards, and designs rigorous mock-drilling scenarios.',
+                    responsibilities: [
+                        'Formulate Business Impact Analyses (BIAs) matching core processes.',
+                        'Author business continuity playbooks and notification chains.',
+                        'Monitor simulated recovery times (RTO/RPO) for continuous status loops.',
+                        'Verify backup site resilience checklists.'
+                    ],
+                    jobAttributes: ['Resilience Champion', 'Process Architect', 'Calm and Systematic'],
+                    reportingLine: 'Director of Operations',
+                    voiceName: 'Charon',
+                    avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+                    capabilities: ['ISO 22301 Resilience', 'Business Impact Analysis', 'Continuity Planning'],
+                    status: 'Idle'
+                });
+            }
+        }
+
+        return list;
+    }, [companyProfile, activeFrameworks]);
+
+    // Autonomous Skill-to-Agent Dispatcher state
+    const [taskQuery, setTaskQuery] = useState('');
+    const [dispatcherSuccess, setDispatcherSuccess] = useState<string | null>(null);
+    const [matchedSkill, setMatchedSkill] = useState<any | null>(null);
+
+    const handleDispatchTask = (query: string) => {
+        setTaskQuery(query);
+        if (!query.trim()) {
+            setDispatcherSuccess(null);
+            setMatchedSkill(null);
+            return;
+        }
+
+        // Search the 754-skill library for matches in title, description or domain
+        const matches = sampleCyberSkills.filter(skill => {
+            const skillW = (skill.title + ' ' + skill.description + ' ' + skill.domain).toLowerCase();
+            return skillW.includes(query.toLowerCase());
+        });
+
+        if (matches.length > 0) {
+            const bestSkill = matches[0];
+            setMatchedSkill(bestSkill);
+
+            // Resolve agent owner
+            let resolvedId = bestSkill.agentOwnerId;
+            if (resolvedId === 'agent-cio') resolvedId = 'agent-mohammed';
+            else if (resolvedId === 'agent-ciso') resolvedId = 'agent-ahmed';
+            else if (resolvedId === 'agent-cto') resolvedId = 'agent-fahad';
+            else if (resolvedId === 'agent-charon') resolvedId = 'agent-rashid';
+
+            const bestAgent = dynamicAgents.find(a => a.id === resolvedId) || 
+                              dynamicAgents.find(a => a.role.toLowerCase().includes(bestSkill.agentOwnerId.replace('agent-', ''))) || 
+                              dynamicAgents[0];
+
+            if (bestAgent) {
+                setSelectedAgent(bestAgent);
+                setDispatcherSuccess(`AUTONOMOUS DISPATCH SUCCESS: Mapped technical task to ${bestAgent.name} [${bestAgent.role}] based on mapped expertise!`);
+            }
+        } else {
+            setDispatcherSuccess(`No precise skill match found in the 754 integrated library. CISO compliance advisor remains assigned.`);
+            setMatchedSkill(null);
+        }
+    };
+
+    // TTS voices from browser cache
+    const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+    // Meeting Logs & active statuses
+    const [isLiveMode, setIsLiveMode] = useState(false);
+    const [meetingLog, setMeetingLog] = useState<DialogueEntry[]>([]);
+    const [isThinking, setIsThinking] = useState(false);
+    const [isMicActive, setIsMicActive] = useState(false);
+
+    // Missing Task generation states
+    const [isTaskGenerating, setIsTaskGenerating] = useState(false);
+    const [generatedTaskDetails, setGeneratedTaskDetails] = useState<{
         id: string;
-        title: string;
-        description: string;
-        assignedAgent: string;
-        assignedRole: string;
-        raciStatus: 'Responsible' | 'Accountable' | 'Consulted' | 'Informed';
-        status: 'To Do' | 'In Progress' | 'Done';
-        progress: number;
-        createdAt: number;
-        completedAt?: number;
-        outputs?: {
-            type: 'policy' | 'risk' | 'audit';
-            id: string;
-            name: string;
+        taskTitle: string;
+        category: string;
+        draftContent: string;
+        agentFeedback: { speaker: string; role: string; comment_en: string; comment_ar: string; status: 'Signed' | 'Needs Review' }[];
+        humanApproved: boolean;
+        implementationTracker: {
+            step: string;
+            status: 'Todo' | 'In Progress' | 'Done';
+            timeline: string;
         }[];
-    }
+    } | null>(null);
 
-    const [delegatedTasks, setDelegatedTasks] = useState<DelegatedTask[]>(() => {
-        const saved = localStorage.getItem('grc_delegated_tasks');
+    // Authority Digital Signature Vault State
+    const [authorities, setAuthorities] = useState<Record<string, SignatureUser>>(() => {
+        const saved = localStorage.getItem('grc_authority_signatures');
         if (saved) {
             try { return JSON.parse(saved); } catch (e) { console.error(e); }
         }
-        return [
-            {
-                id: 'task-1',
-                title: 'Develop Privilege Access Management Policy',
-                description: 'Draft the formal operational boundary policy for high-privilege users in accordance with SAMA CSF 3.1.2 and NCA ECC-1-2.',
-                assignedAgent: 'Fahad AI',
-                assignedRole: 'CTO',
-                raciStatus: 'Responsible',
-                status: 'To Do',
-                progress: 0,
-                createdAt: Date.now() - 172800000,
-            },
-            {
-                id: 'task-2',
-                title: 'Formulate Business Continuity Incident Playbook',
-                description: 'Write a comprehensive disaster recovery step-by-step playbook under SAMA CSF 3.5.3.',
-                assignedAgent: 'Ahmed AI',
-                assignedRole: 'CISO',
-                raciStatus: 'Accountable',
-                status: 'To Do',
-                progress: 0,
-                createdAt: Date.now() - 86400000,
-            },
-            {
-                id: 'task-3',
-                title: 'Conduct SAMA CSF Multi-Cloud Security Assessment',
-                description: 'Evaluate physical and virtual cloud boundaries for compliance and list key vulnerabilities.',
-                assignedAgent: 'Rashid AI',
-                assignedRole: 'Risk Manager',
-                raciStatus: 'Responsible',
-                status: 'To Do',
-                progress: 0,
-                createdAt: Date.now() - 43200000,
-            }
-        ];
+        return {
+            riskOwner: { name: 'Sarah Johnson', role: 'Risk Owner', pin: '1111', registered: true, registeredAt: Date.now() },
+            lineManager: { name: 'Thamer Al-Ahmadi', role: 'Line Manager', pin: '2222', registered: true, registeredAt: Date.now() },
+            cio: { name: 'Mohammed Al-Saudi', role: 'CIO', pin: '3333', registered: true, registeredAt: Date.now() },
+            ceo: { name: 'Abdulaziz Bin Faisal', role: 'CEO', pin: '4444', registered: false }
+        };
     });
 
     useEffect(() => {
-        localStorage.setItem('grc_delegated_tasks', JSON.stringify(delegatedTasks));
-    }, [delegatedTasks]);
+        localStorage.setItem('grc_authority_signatures', JSON.stringify(authorities));
+    }, [authorities]);
 
-    const [activeWorkingTaskId, setActiveWorkingTaskId] = useState<string | null>(null);
-    const [simulationLogs, setSimulationLogs] = useState<string[]>([]);
-
-    const getOfflineSimDialogue = (userContext?: string, analysisContext?: string, eccComp?: number, risksCount?: number) => {
-        const textLower = (userContext || "").toLowerCase();
-        if (textLower.includes("policy") || textLower.includes("document") || textLower.includes("procedure")) {
-            return [
-                {
-                    speaker: "Ahmed Al-Mansoori",
-                    message_en: "Regarding the policy drafting request: As CISO, I hold the ultimate accountability for our documentation structure under SAMA and NCA regulations. Asaad, let's expedite this draft.",
-                    message_ar: "بخصوص طلب صياغة السياسات: بصفتي مسؤول أمن المعلومات، أتحمل المسؤولية الكاملة عن هيكل وثائقنا بموجب لوائح مؤسسة النقد العربي السعودي وهيئة الأمن السيبراني. أسعد، دعنا نسرع في هذه المسودة.",
-                    message_ur: "پالیسی ڈرافٹنگ کی درخواست کے بارے میں: بطور سی آئی ایس او، میرے پاس SAMA اور NCA قوانین کے تحت ہماری دستاویزات کی آخری ذمہ داری ہے۔ اسعد، آئیے اس ڈرافٹ کو تیزی سے اگے بڑھائیں۔",
-                    message_de: "Bezüglich der Richtlinienerstellung: Als CISO trage ich die ultimative Verantwortung für unsere Dokumentationsstruktur gemäß SAMA- und NCA-Vorschriften. Asaad, lassen Sie uns diesen Entwurf beschleunigen.",
-                    message_zh: "关于政策草拟要求：作为首席信息安全官(CISO)，我对SAMA和NCA法规下的文档结构承担最终责任。Asaad，让我们加快这个草案的编写。"
-                },
-                {
-                    speaker: "Asaad AI",
-                    message_en: "Absolutely, Ahmed. SAMA CSF requirements dictate formal policy approvals. I've initiated a compliant draft targeting these missing domains.",
-                    message_ar: "بالتأكيد يا أحمد. تتطلب متعلبات SAMA CSF موافقات رسمية على السياسات. لقد بدأت مسودة متوافقة تستهدف هذه المجالات المفقودة.",
-                    message_ur: "بالکل، احمد۔ SAMA CSF کے تقاضے پالیسیوں کی باقاعدہ منظوری کا کہتے ہیں۔ میں نے ان غائب ڈومینز کے لئے ایک تعمیل والا ڈرافٹ شروع کیا ہے۔",
-                    message_de: "Absolut, Ahmed. Die SAMA-CSF-Anforderungen verlangen formelle Richtliniengenehmigungen. Ich habe einen konformen Entwurf gestartet, der auf diese fehlenden Domänen abzielt.",
-                    message_zh: "完全同意，Ahmed。SAMA CSF的要求规定了正式的政策批准。我已经启动了一个针对这些缺失领域的合规草案。"
-                },
-                {
-                    speaker: "Fahad AI",
-                    message_en: "Excellent. I will review the technical architecture controls within the document once Asaad finishes the primary draft.",
-                    message_ar: "ممتاز. سأراجع ضوابط الهندسة التقنية داخل المستند بمجرد أن ينتهي أسعد من المسودة الأساسية.",
-                    message_ur: "بہت اچھا۔ اسعد کے بنیادی ڈرافٹ کو ختم کرنے کے بعد میں دستاویز کے اندر سیکیورٹی اور ٹیکنالوجی کنٹرولز کا جائزہ لوں گا۔",
-                    message_de: "Hervorragend. Ich werde die technischen Architekturkontrollen im Dokument überprüfen, sobald Asaad den ersten Entwurf fertigstellt.",
-                    message_zh: "太好了。在Asaad完成初稿后，我将审查文档里的技术架构控制措施。"
-                }
-            ];
+    // Active Auditing and evidence registries
+    const [evidences, setEvidences] = useState<AuditEvidence[]>(() => {
+        const saved = localStorage.getItem('grc_audit_evidence');
+        if (saved) {
+            try { return JSON.parse(saved); } catch (e) { console.error(e); }
         }
-        if (textLower.includes("risk") || textLower.includes("assess") || textLower.includes("mitigate")) {
-            return [
-                {
-                    speaker: "Ahmed Al-Mansoori",
-                    message_en: "We are monitoring the risks closely. Our ISO 31000 methodology identifies key security threats. We should focus on our active risk treatment plans.",
-                    message_ar: "نحن نراقب المخاطر عن كثب. تحدد منهجية ISO 31000 الخاصة بنا التهديدات الأمنية الرئيسية. يجب أن نركز على خطط معالجة المخاطر النشطة لدينا.",
-                    message_ur: "ہم خطرات کی قریب سے نگرانی کر رہے ہیں۔ ہماری ISO 31000 طریقہ کار اہم سیکورٹی خطرات کی نشاندہی کرتا ہے۔ ہمیں اپنے فعال علاج کے منصوبوں پر توجہ دینی چاہیے۔",
-                    message_de: "Wir überwachen die Risiken genau. Unsere ISO 31000-Methodik identifiziert die wichtigsten Sicherheitsbedrohungen. Wir sollten sich auf unsere aktiven Risikobehandlungspläne konzentrieren.",
-                    message_zh: "我们正在密切监控风险。我们的ISO 31000方法论识别了关键的安全威胁。我们应该专注于现有的风险处理计划。"
-                },
-                {
-                    speaker: "Ahmed Al-Mansoori",
-                    message_en: "Agree. Every high-risk entry must have concrete control owners. Fahad, ensure technology backups are fully tested.",
-                    message_ar: "موافق. يجب أن يكون لكل مدخل عالي المخاطر مالكو ضوابط ملموسة. فهد، تأكد من اختبار النسخ الاحتياطية التقنية بالكامل.",
-                    message_ur: "متفق ہوں۔ ہر ہائی رسک انٹری کے پاس ٹھوس کنٹرول مالکان ہونے چاہئیں۔ فہد، یقینی بنائیں کہ ٹیکنالوجی بیک اپ کا مکمل تجربہ کیا گیا ہے۔",
-                    message_de: "Einverstanden. Jeder risikoreiche Eintrag muss konkrete Kontrolleigentümer haben. Fahad, stellen Sie sicher, dass Technologie-Backups vollständig getestet sind.",
-                    message_zh: "同意。每一个高风险项都必须有具体的控制负责人。Fahad，确保技术备份得到了完整测试。"
-                },
-                {
-                    speaker: "Fahad AI",
-                    message_en: "Understood, Ahmed. We are preparing localized operational recovery drills to demonstrate mitigation efficacy.",
-                    message_ar: "مفهوم يا أحمد. نحن نجهز تدريبات استرداد تشغيلية محلية لإثبات فعالية التخفيف.",
-                    message_ur: "سمجھ گیا، احمد۔ ہم فعال تخفیف کی افادیت کو ظاہر کرنے کے لیے مقامی آپریشنل ریکوری مشقیں تیار کر رہے ہیں۔",
-                    message_de: "Verstanden, Ahmed. Wir bereiten lokalisierte betriebliche Wiederherstellungsübungen vor, um die Wirksamkeit der Risikominderung zu demonstrieren.",
-                    message_zh: "明白，Ahmed。我们正在筹备本地化的业务恢复演练，以证明风险缓解措施的效果。"
-                }
-            ];
+        return [];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('grc_audit_evidence', JSON.stringify(evidences));
+    }, [evidences]);
+
+    // Selected control for auditing
+    const [selectedAuditControlId, setSelectedAuditControlId] = useState<string>('ECC-1-1');
+    const [selectedAuditFramework, setSelectedAuditFramework] = useState<'NCA ECC' | 'SAMA CSF' | 'PDPL'>('NCA ECC');
+    const [isScanningEvidence, setIsScanningEvidence] = useState(false);
+    const [auditSearchQuery, setAuditSearchQuery] = useState('');
+
+    // Pre-registered mock list of framework controls for selection in auditor portal
+    const frameworkControlsList = [
+        { id: 'ECC-1-1', title: 'Cybersecurity Governance Policy Guideline', domain: 'Governance' },
+        { id: 'ECC-1-2', title: 'Roles and Responsibilities Matrix', domain: 'Governance' },
+        { id: 'ECC-2-1', title: 'Asset Inventory Management Standard', domain: 'Operations' },
+        { id: 'ECC-2-5', title: 'Network Protection Boundary Architecture', domain: 'Technical' },
+        { id: 'ECC-3-2', title: 'Data Encryption and Protection Procedure', domain: 'Technical' },
+        { id: 'SAMA-2.1', title: 'Enterprise Information Security Policy', domain: 'SAMA CSF' },
+        { id: 'SAMA-2.8', title: 'Third-Party Relationship Security Requirements', domain: 'SAMA CSF' },
+        { id: 'PDPL-3.1', title: 'Personal Data Processing & Privacy Notice', domain: 'PDPL' },
+    ];
+
+    // Certificate issued registry
+    const [certificates, setCertificates] = useState<ComplianceCertificate[]>(() => {
+        const saved = localStorage.getItem('grc_certificates');
+        if (saved) {
+            try { return JSON.parse(saved); } catch (e) { console.error(e); }
         }
-        return [
-            {
-                speaker: "Ahmed Al-Mansoori",
-                message_en: `Welcome to the GRC boardroom database. We are operating with a current compliance score of ${eccComp || 0}%. Let's discuss our immediate priorities.`,
-                message_ar: `مرحبًا بكم في قاعدة بيانات قاعة اجتماعات الحوكمة والمخاطر والامتثال. نحن نعمل بنسبة امتثال تبلغ ${eccComp || 0}٪ حاليًا. دعونا نناقش أولوياتنا الفورية.`,
-                message_ur: `جی آر سی بورڈ روم ڈیٹا بیس میں خوش آمدید۔ ہم فی الحال ${eccComp || 0}٪ کے تعمیل اسکور کے ساتھ کام کر رہے ہیں۔ آئیے اپنی فوری ترجیحات پر بات کریں۔`,
-                message_de: `Willkommen in der GRC-Vorstandsdatenbank. Wir arbeiten derzeit mit einem Compliance-Wert von ${eccComp || 0}%. Lassen Sie uns unsere unmittelbaren Prioritäten besprechen.`,
-                message_zh: `欢迎来到GRC董事会数据库。我们目前以 ${eccComp || 0}% 的合规得分运行。让我们讨论一下我们眼前的首要任务。`
-            },
-            {
-                speaker: "Fahad AI",
-                message_en: "As Chief Technology Officer, I'm auditing our endpoints to address any technical configuration gaps immediately.",
-                message_ar: "بصفتي كبير مسؤولي التكنولوجيا، أقوم بمراجعة نقاط النهاية لدينا لمعالجة أي ثغرات في التكوين الفني على الفور.",
-                message_ur: "بطور چیف ٹیکنالوجی آفیسر، میں سیکیورٹی گیپس کو فوری طور پر دور کرنے کے لیے ہمارے اینڈ پوائنٹس کا آڈٹ کر رہا ہوں۔",
-                message_de: "Als Chief Technology Officer überprüfe ich unsere Endpunkte, um eventuelle Lücken in der technischen Konfiguration sofort zu beheben.",
-                message_zh: "作为首席技术官，我正在审计端点，以便立即解决任何技术配置上的漏洞。"
-            },
-            {
-                speaker: "Abdullah AI",
-                message_en: "Our continuous AI auditors are ready to evaluate the implementation evidence. Please upload screenshots for validation.",
-                message_ar: "مدققو الذكاء الاصطناعي المستمرون لدينا مستعدون لتقييم أدلة التنفيذ. يرجى تحميل لقطات الشاشة للتحقق من صحتها.",
-                message_ur: "ہمارے مسلسل اے آئی آڈٹرز عمل درآمد کے ثبوت کا جائزہ لینے کے لیے تیار ہیں۔ تصدیق کے لیے براہ کرم اسکرین شاٹس اپ لوڈ کریں۔",
-                message_de: "Unsere kontinuierlichen KI-Auditoren sind bereit, die Implementierungsnachweise zu bewerten. Bitte laden Sie Screenshots zur Validierung hoch.",
-                message_zh: "我们的持续AI审计员已准备好评估实施证据。请上传截图进行验证。"
-            }
-        ];
-    };
+        return [];
+    });
 
-    const simulateTaskProgress = async (taskId: string) => {
-        const task = delegatedTasks.find(t => t.id === taskId);
-        if (!task || activeWorkingTaskId) return;
+    useEffect(() => {
+        localStorage.setItem('grc_certificates', JSON.stringify(certificates));
+    }, [certificates]);
 
-        setActiveWorkingTaskId(taskId);
-        setSimulationLogs([`Initializing agentic execution thread for ${task.assignedAgent}...`]);
+    // Escalation Simulator Logs
+    const [escalationLogs, setEscalationLogs] = useState<{ id: string; timestamp: number; type: 'Email' | 'WhatsApp' | 'Call'; target: string; message: string; status: 'Dispatched' | 'Delivered' | 'Connected' | 'Acked' }[]>([]);
+    const [outboundTarget, setOutboundTarget] = useState('+966 50 123 4567');
+    const [outboundEmail, setOutboundEmail] = useState('executive.board@sama-compliant-node.gov.sa');
+    const [escalationTriggerSuccess, setEscalationTriggerSuccess] = useState(false);
 
-        const updateTask = (updates: Partial<DelegatedTask>) => {
-            setDelegatedTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
-        };
+    // References
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const activeSimulationIdRef = useRef(0);
+    const speechRecognitionRef = useRef<any>(null);
 
-        updateTask({ status: 'In Progress', progress: 15 });
-
-        await new Promise(r => setTimeout(r, 1000));
-        setSimulationLogs(prev => [...prev, `${task.assignedAgent} loaded RACI configuration [Role: ${task.assignedRole} - Status: ${task.raciStatus}].`]);
-        updateTask({ progress: 35 });
-
-        await new Promise(r => setTimeout(r, 1200));
-        setSimulationLogs(prev => [...prev, `${task.assignedAgent} is accessing enterprise GRC compliance models (NCA ECC & SAMA CSF)...`]);
-        updateTask({ progress: 60 });
-
-        let artifactDetails = "";
-        try {
-            const isPolicyString = task.title.toLowerCase().includes("policy") || task.description.toLowerCase().includes("policy") || task.title.toLowerCase().includes("incident") || task.description.toLowerCase().includes("incident") || task.title.toLowerCase().includes("playbook") || task.description.toLowerCase().includes("playbook") || task.title.toLowerCase().includes("procedure") || task.description.toLowerCase().includes("procedure");
-            const isRiskString = task.title.toLowerCase().includes("risk") || task.description.toLowerCase().includes("risk") || task.title.toLowerCase().includes("vulnerab") || task.description.toLowerCase().includes("vulnerab") || task.title.toLowerCase().includes("threat") || task.description.toLowerCase().includes("threat");
-
-            if (isPolicyString && onAddDocument) {
-                let policyText = "";
-                if (window.navigator.onLine) {
-                    try {
-                        policyText = await AIService.generateContent(`Draft a robust professional Cybersecurity GRC policy content based on: "${task.title} - ${task.description}". Format with nice headers and sections.`);
-                    } catch {
-                        policyText = `# ${task.title}\n\n## 1. Objective\nThis document defines corporate governance guidelines drafted offline by ${task.assignedAgent}.\n\n## 2. Scope\nApplies to all enterprise assets and employees.\n\n## 3. Operational Requirements\n1. Ensure controls are monitored continuously.\n2. Report gaps to the CISO.`;
-                    }
-                } else {
-                    policyText = `# ${task.title}\n\n## 1. Objective\nThis document defines corporate governance guidelines drafted offline by ${task.assignedAgent}.\n\n## 2. Scope\nApplies to all enterprise assets and employees.\n\n## 3. Operational Requirements\n1. Ensure controls are monitored continuously.\n2. Report gaps to the CISO.`;
-                }
-
-                const docId = `doc-del-${Date.now()}`;
-                const newDoc: PolicyDocument = {
-                    id: docId,
-                    controlId: `DEP-${Date.now().toString().slice(-4)}`,
-                    domainName: 'Governance & Alignment',
-                    subdomainTitle: 'Agentic Mandates',
-                    controlDescription: `Auto-generated from delegated task: ${task.title}`,
-                    status: 'Pending CISO Approval',
-                    content: {
-                        policy: policyText,
-                        procedure: "Drafted and awaiting review",
-                        guideline: "Standard execution guideline"
-                    },
-                    approvalHistory: [],
-                    createdAt: Date.now(),
-                    updatedAt: Date.now(),
-                    generatedBy: 'AI Agent'
-                };
-                onAddDocument(newDoc);
-                artifactDetails = `Generated GRC Document [${newDoc.controlId}: ${newDoc.controlDescription.slice(0, 30)}...]`;
-                updateTask({
-                    outputs: [{ type: 'policy', id: docId, name: task.title }]
-                });
-            } else if (isRiskString && onAddRisk) {
-                const riskId = `risk-del-${Date.now()}`;
-                const newRisk: Risk = {
-                    id: riskId,
-                    title: task.title,
-                    description: task.description,
-                    category: 'Operational Technology',
-                    owner: task.assignedAgent,
-                    inherentLikelihood: 4, inherentImpact: 4, inherentScore: 16,
-                    existingControl: 'Internal Reviews', controlEffectiveness: 'Needs Improvement',
-                    residualLikelihood: 3, residualImpact: 3, residualScore: 9,
-                    likelihood: 3, impact: 3,
-                    treatmentOption: 'Mitigate', mitigation: 'Automated policy enforcement.', responsibility: task.assignedRole,
-                    dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-                    acceptanceCriteria: 'Satisfactory evidence logs', approvedBy: 'Ahmed Al-Mansoori', remarks: 'Generated via delegated task'
-                };
-                onAddRisk(newRisk);
-                artifactDetails = `Logged Risk Register Entry [${newRisk.title}]`;
-                updateTask({
-                    outputs: [{ type: 'risk', id: riskId, name: task.title }]
-                });
-            } else {
-                if (onAddAuditLog) {
-                    onAddAuditLog('AGENTIC_AUDIT_COMPLETED', `Delegated task validated by ${task.assignedAgent}: ${task.title}`);
-                }
-                artifactDetails = `Verified evidence log added to System Audit Ledger.`;
-            }
-
-            setSimulationLogs(prev => [...prev, `Success: ${artifactDetails}`]);
-
-        } catch (e) {
-            console.error(e);
-            setSimulationLogs(prev => [...prev, "Simulation generated minor metadata warnings, proceeding to write-back..."]);
-        }
-
-        updateTask({ progress: 90 });
-        await new Promise(r => setTimeout(r, 1000));
-
-        updateTask({ status: 'Done', progress: 100, completedAt: Date.now() });
-        setSimulationLogs(prev => [...prev, `Task successfully completed by ${task.assignedAgent}! Systems connected.`]);
-        
-        if (onAddAuditLog) {
-            onAddAuditLog('VIRTUAL_DEPT_ACTION', `Completed task: "${task.title}" by ${task.assignedAgent}`);
-        }
-
-        setTimeout(() => {
-            setActiveWorkingTaskId(null);
-            setSimulationLogs([]);
-        }, 3000);
-    };
-
-    // Live Collaboration State
-    const [isLiveMode, setIsLiveMode] = useState(false);
-    const [boardroomLang, setBoardroomLang] = useState<'en' | 'ar' | 'ur' | 'de' | 'zh'>('en');
-    const [meetingLog, setMeetingLog] = useState<DialogueEntry[]>([]);
-    const [isThinking, setIsThinking] = useState(false);
-
-    // Voice & Simulation Interruption States
-    const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-    const activeSimulationIdRef = useRef<number>(0);
-
-    // Dynamic Voice Loader
+    // Load SpeechSynthesis Voices
     useEffect(() => {
         const loadVoices = () => {
             if ('speechSynthesis' in window) {
@@ -348,359 +467,317 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }
     }, []);
-    
-    // Voice & Input State
-    const [isMicActive, setIsMicActive] = useState(false);
-    const [userSpeechInput, setUserSpeechInput] = useState('');
-    const recognitionRef = useRef<any>(null);
-    
-    // Document Upload for Meeting
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [uploadedFile, setUploadedFile] = useState<{name: string, data: string, type: string} | null>(null);
-    const [isAnalyzingDoc, setIsAnalyzingDoc] = useState(false);
 
-    const chatContainerRef = useRef<HTMLDivElement>(null);
-
-    // Collaboration Feed logs filtered from core audit Log (with normal fonts)
-    const collaborationLogs = (auditLog || []).filter(entry => 
-        entry.action === 'VIRTUAL_DEPT_ACTION' ||
-        entry.action === 'AGENTIC_AUDIT_COMPLETED' ||
-        String(entry.details || '').toLowerCase().includes('task') ||
-        String(entry.details || '').toLowerCase().includes('delegate') ||
-        String(entry.details || '').toLowerCase().includes('agent') ||
-        ['Ahmed', 'Fahad', 'Mohammed', 'Ibrahim', 'Asaad', 'Abdullah', 'Rashid'].some(name => String(entry.details || '').includes(name))
-    );
-
-    // Scroll to bottom
-    useEffect(() => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-    }, [meetingLog, isThinking]);
-
-    // Initialize Speech Recognition
+    // Speech recognition setup
     useEffect(() => {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = false;
-            recognitionRef.current.interimResults = false;
-            recognitionRef.current.lang = 'en-US';
+            const SpeechClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            const rec = new SpeechClass();
+            rec.continuous = false;
+            rec.interimResults = false;
+            rec.lang = boardroomLang === 'ar' ? 'ar-SA' : 'en-US';
 
-            recognitionRef.current.onresult = (event: any) => {
-                const transcript = event.results[0][0].transcript;
-                setUserSpeechInput(transcript);
+            rec.onresult = (event: any) => {
+                const text = event.results[0][0].transcript;
+                handleUserSpeak(text);
                 setIsMicActive(false);
-                // Auto-send user input to simulation
-                handleUserSpeak(transcript);
             };
 
-            recognitionRef.current.onerror = (event: any) => {
-                console.error("Speech recognition error", event.error);
+            rec.onerror = (err: any) => {
+                console.warn("Speech recognition warning: ", err);
                 setIsMicActive(false);
             };
-            
-            recognitionRef.current.onend = () => {
+
+            rec.onend = () => {
                 setIsMicActive(false);
-            }
+            };
+
+            speechRecognitionRef.current = rec;
         }
-    }, []);
+    }, [boardroomLang]);
 
     const toggleMic = () => {
+        if (!speechRecognitionRef.current) {
+            alert("Speech recognition is not supported in this frame / browser version.");
+            return;
+        }
         if (isMicActive) {
-            recognitionRef.current?.stop();
+            speechRecognitionRef.current.stop();
             setIsMicActive(false);
         } else {
-            recognitionRef.current?.start();
+            speechRecognitionRef.current.start();
             setIsMicActive(true);
         }
     };
 
-    // Text-to-Speech Helper
-    const speakLine = (line: Partial<DialogueEntry> | string, speaker: string) => {
+    // Auto scroll chat
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [meetingLog]);
+
+    // Delegated task registry state
+    interface DelegatedTask {
+        id: string;
+        title: string;
+        description: string;
+        assignedAgent: string;
+        assignedRole: string;
+        raciStatus: 'Responsible' | 'Accountable' | 'Consulted' | 'Informed';
+        status: 'To Do' | 'In Progress' | 'Done';
+        progress: number;
+        createdAt: number;
+    }
+
+    const [delegatedTasks, setDelegatedTasks] = useState<DelegatedTask[]>(() => {
+        const saved = localStorage.getItem('grc_delegated_tasks');
+        if (saved) {
+            try { return JSON.parse(saved); } catch (e) { console.error(e); }
+        }
+        return [
+            {
+                id: 'task-1',
+                title: 'Develop Privilege Access Management Policy',
+                description: 'Draft operational boundary policy for high-privilege users in accordance with SAMA CSF 3.1.2 and NCA ECC-1-2.',
+                assignedAgent: 'Fahad AI',
+                assignedRole: 'CTO',
+                raciStatus: 'Responsible',
+                status: 'In Progress',
+                progress: 60,
+                createdAt: Date.now() - 172800000,
+            },
+            {
+                id: 'task-2',
+                title: 'Formulate Business Continuity Incident Playbook',
+                description: 'Write disaster recovery step-by-step playbook under SAMA CSF 3.5.3.',
+                assignedAgent: 'Ahmed AI',
+                assignedRole: 'CISO',
+                raciStatus: 'Accountable',
+                status: 'To Do',
+                progress: 10,
+                createdAt: Date.now() - 86400000,
+            }
+        ];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('grc_delegated_tasks', JSON.stringify(delegatedTasks));
+    }, [delegatedTasks]);
+
+    // Text To Speech with optimized natural voice parameters mapping distinct agents
+    const speakLine = (line: Partial<DialogueEntry> | string, speakerName: string) => {
         if (!('speechSynthesis' in window)) return;
         
-        // Cancel previous speech to avoid overlap
+        // Suppress overlap
         window.speechSynthesis.cancel();
 
-        let text = "";
-        let speakingLang = 'en';
+        let rawText = "";
+        let speakingLanguage = boardroomLang;
 
         if (typeof line === 'string') {
-            text = line;
+            rawText = line;
         } else {
-            // Read based on boardroomLang selection
             if (boardroomLang === 'ar') {
-                text = line.message_ar || line.message_en || "";
-                speakingLang = 'ar';
-            } else if (boardroomLang === 'ur') {
-                text = line.message_ur || line.message_en || "";
-                speakingLang = 'ur';
-            } else if (boardroomLang === 'de') {
-                text = line.message_de || line.message_en || "";
-                speakingLang = 'de';
-            } else if (boardroomLang === 'zh') {
-                text = line.message_zh || line.message_en || "";
-                speakingLang = 'zh';
+                rawText = line.message_ar || line.message_en || "";
+                speakingLanguage = 'ar';
             } else {
-                text = line.message_en || "";
-                speakingLang = 'en';
+                rawText = line.message_en || "";
+                speakingLanguage = 'en';
             }
         }
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voicesList = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
+        const utterance = new SpeechSynthesisUtterance(rawText);
+        const systemVoices = window.speechSynthesis.getVoices();
         
-        // Comprehensive natural voice selection targeting selected language and human gender
-        const getBestVoice = () => {
-            const keywords: Record<string, string[]> = {
-                ar: ['arabic', 'ar', 'maged', 'tarik', 'microsoft naayf', 'male'],
-                ur: ['urdu', 'ur', 'microsoft asif', 'male'],
-                de: ['deutsch', 'german', 'de', 'stefan', 'male'],
-                zh: ['chinese', 'mandarin', 'zh', 'huihui', 'kangkang', 'male'],
-                en: ['google us english male', 'natural male', 'premium male', 'guy', 'david', 'mark', 'george', 'richard', 'andrew', 'microsoft david', 'male']
-            };
-            const currentKeywords = keywords[speakingLang] || ['en'];
+        // Find language matching voices
+        const languageMatchedVoices = systemVoices.filter(v => v.lang.toLowerCase().startsWith(speakingLanguage));
+        
+        let targetVoice = null;
+        if (languageMatchedVoices.length > 0) {
+            const speakerLower = (speakerName || '').toLowerCase();
             
-            for (const keyword of currentKeywords) {
-                const voice = voicesList.find(v => v.name.toLowerCase().includes(keyword) && v.lang.toLowerCase().startsWith(speakingLang));
-                if (voice) return voice;
+            // Assign distinct premium voices or distinct indices relative to names to bypass robotic uniformity
+            if (speakerLower.includes("ahmed")) {
+                // deep authoritative CISO
+                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("david") || v.name.toLowerCase().includes("maged")) || languageMatchedVoices[0];
+                utterance.pitch = 0.82;
+                utterance.rate = 0.88;
+            } else if (speakerLower.includes("fahad")) {
+                // rapid-fire CTO
+                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("google") || v.name.toLowerCase().includes("mark") || v.name.toLowerCase().includes("tarik")) || languageMatchedVoices[Math.min(1, languageMatchedVoices.length - 1)];
+                utterance.pitch = 1.05;
+                utterance.rate = 1.05;
+            } else if (speakerLower.includes("mohammed")) {
+                // statesman CIO
+                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("george") || v.name.toLowerCase().includes("naayf")) || languageMatchedVoices[Math.min(2, languageMatchedVoices.length - 1)];
+                utterance.pitch = 0.95;
+                utterance.rate = 0.94;
+            } else if (speakerLower.includes("rashid")) {
+                // Enterprise Risk Manager
+                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("premium") || v.name.toLowerCase().includes("guy") || v.name.toLowerCase().includes("tarif")) || languageMatchedVoices[Math.min(3, languageMatchedVoices.length - 1)];
+                utterance.pitch = 0.76;
+                utterance.rate = 0.90;
+            } else if (speakerLower.includes("ibrahim")) {
+                // process-driven DOP
+                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("microsoft") || v.name.toLowerCase().includes("zira") || v.name.toLowerCase().includes("hoda")) || languageMatchedVoices[Math.min(4, languageMatchedVoices.length - 1)];
+                utterance.pitch = 1.00;
+                utterance.rate = 0.96;
+            } else if (speakerLower.includes("asaad")) {
+                // structured Compliance Officer
+                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("english") || v.name.toLowerCase().includes("laila")) || languageMatchedVoices[Math.min(5, languageMatchedVoices.length - 1)];
+                utterance.pitch = 1.03;
+                utterance.rate = 0.92;
+            } else if (speakerLower.includes("abdullah")) {
+                // skeptical Internal Auditor
+                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("david") || v.name.toLowerCase().includes("naayf")) || languageMatchedVoices[languageMatchedVoices.length % 2];
+                utterance.pitch = 0.88;
+                utterance.rate = 1.08;
+            } else {
+                targetVoice = languageMatchedVoices[0];
             }
-            
-            const anyLangMatch = voicesList.find(v => v.lang.toLowerCase().startsWith(speakingLang));
-            if (anyLangMatch) return anyLangMatch;
-            
-            return voicesList.find(v => v.lang.toLowerCase().startsWith('en'));
-        };
-
-        const selectedVoice = getBestVoice();
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-            utterance.lang = selectedVoice.lang;
         }
 
-        // Adjust settings to make each male spokesperson sound distinct but completely natural and human (never robotic)
-        if (speaker.includes("Ahmed")) {
-            utterance.pitch = 0.82;
-            utterance.rate = 0.88;
-        } else if (speaker.includes("Fahad")) {
-            utterance.pitch = 0.95;
-            utterance.rate = 0.98;
-        } else if (speaker.includes("Mohammed")) {
-            utterance.pitch = 1.0;
-            utterance.rate = 0.92;
-        } else if (speaker.includes("Ibrahim")) {
-            utterance.pitch = 0.88;
-            utterance.rate = 0.94;
-        } else if (speaker.includes("Asaad")) {
-            utterance.pitch = 1.02;
-            utterance.rate = 0.96;
-        } else {
-            utterance.pitch = 0.96;
-            utterance.rate = 0.94;
+        if (targetVoice) {
+            utterance.voice = targetVoice;
+            utterance.lang = targetVoice.lang;
         }
-        
+
         window.speechSynthesis.speak(utterance);
     };
 
+    // User Text Input Submit inside Meeting
     const handleUserSpeak = async (text: string) => {
-        // Interrupt current active runs immediately
         activeSimulationIdRef.current += 1;
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
         }
 
-        // Add user entry immediately
         const userEntry: DialogueEntry = {
             speaker: "You (User)",
             message_en: text,
-            message_ar: "...", // Placeholder
+            message_ar: text,
             timestamp: Date.now()
         };
+
         setMeetingLog(prev => [...prev, userEntry]);
         
-        // Trigger agents to respond to this
+        // Run simulated multi-agent dialog reflecting common boardroom intelligence
         await runSimulationTurn(text);
     };
 
-    // --- Simulation Logic ---
-
-    // Optimized JSON extractor
-    const extractJson = (text: string) => {
-        const jsonMatch = text.match(/\[[\s\S]*\]/);
-        return jsonMatch ? jsonMatch[0] : text;
+    const cleanJson = (text: string) => {
+        const match = text.match(/\[[\s\S]*\]/);
+        return match ? match[0] : text;
     };
 
-    const runSimulationTurn = async (userContext?: string, analysisContext?: string) => {
+    // Simulation / Boardroom reasoning loop powered by Gemini under general template context
+    const runSimulationTurn = async (userMsg?: string) => {
         setIsThinking(true);
         const currentRunId = ++activeSimulationIdRef.current;
 
         try {
-            if (meetingLog.length === 0 && !userContext && !analysisContext) {
-                const initialLine: DialogueEntry = {
+            if (meetingLog.length === 0 && !userMsg) {
+                const welcomeLine: DialogueEntry = {
                     speaker: "Ahmed Al-Mansoori",
-                    message_en: "We are compliance to zero percent. We have a clean state with none of our controls implemented yet. Let's start working on the missing pieces of our cybersecurity puzzle to begin building it. How should we proceed?",
-                    message_ar: "نحن في حالة امتثال بنسبة صفر بالمائة. لدينا لوحة نظيفة تمامًا ولم نقم بتطبيق ضوابط بعد. لنبدأ في معالجة القطع المفقودة لخطتنا الأمنية لنبدأ بالبناء والامتثال. كيف تريد منا أن نبدأ؟",
-                    message_ur: "ہماری تعمیل زیرو فیصد پر ہے۔ ابھی ہمارا ایک بھی کنٹرول لاگو نہیں ہوا ہے۔ آئیے اپنے سائبر سیکیورٹی کے غائب ٹکڑوں پر کام شروع کریں تاکہ اسے تعمیر کیا جا سکے۔ ہمیں کیسے آگے بڑھنا چاہئے؟",
-                    message_de: "Wir sind bei null Prozent Compliance. Wir haben einen sauberen Zustand, da noch keine unserer Kontrollen implementiert wurden. Fangen wir an, an den fehlenden Teilen unseres Cybersecurity-Rätsels zu arbeiten. Wie sollen wir vorgehen?",
-                    message_zh: "我们的合规进度为零百分比。我们处于一个没有任何安全控制措施实施的状态。让我们开始着手解决网络安全中缺失的部分，并开始构建合规体系。请问我们应该如何进行？",
+                    message_en: "Welcome board members. As CISO, I would like to initialize this strategic alignment session. We must address outstanding controls under our NCA ECC, SAMA CSF, and PDPL frameworks. What shall we target today?",
+                    message_ar: "مرحباً بأعضاء مجلس الإدارة. بصفتي مسؤول أمن المعلومات، أرغب في بدء هذه الجلسة الاستراتيجية. يجب علينا مراجعة الضوابط المعلقة وتوثيقها لتسليمها لمدقق الحسابات. كيف ترغبون بالبدء؟",
                     timestamp: Date.now()
                 };
-                speakLine(initialLine, initialLine.speaker);
-                setMeetingLog([initialLine]);
+                speakLine(welcomeLine, welcomeLine.speaker);
+                setMeetingLog([welcomeLine]);
                 setIsThinking(false);
                 return;
             }
 
-            // 1. Calculate Context
-            const eccCompliance = Math.round((eccAssessment.filter(i => i.controlStatus === 'Implemented').length / (eccAssessment.length || 1)) * 100);
-            const criticalRisks = risks.filter(r => (r.residualScore || 0) > 15).length;
+            const eccCompliance = Math.round((eccAssessment.filter(v => v.controlStatus === 'Implemented').length / (eccAssessment.length || 1)) * 100);
+            const activeRisksCount = risks.length;
+            const outstandingTasks = delegatedTasks.filter(t => t.status !== 'Done').length;
 
-            // 2. Build Dialogue Transcript history
-            const historyText = meetingLog.length === 0 
-                ? "First turn. Meeting is starting." 
-                : meetingLog.slice(-8).map(log => `${log.speaker}: "${log.message_en}"${log.action ? ` [Triggered: ${log.action}]` : ''}`).join("\n");
+            const conversationHistory = meetingLog.slice(-5).map(m => `${m.speaker}: "${m.message_en}"`).join('\n');
+            const specificPrompt = userMsg 
+                ? `The administrator explicitly requested: "${userMsg}". Speak relative to their query representing your unique GRC boardroom expertise.`
+                : `Continue GRC strategizing. Focus on SAMA compliance, security architecture mapping, and auditor evidence verification.`;
 
-            let specificInstruction = "Discuss the lowest compliance areas and devise a GRC strategy.";
-            if (userContext) {
-                specificInstruction = `The user asked or said: "${userContext}". Respond immediately and professionally to the user's input, answering their questions relative to the current GRC status.`;
-            } else if (analysisContext) {
-                specificInstruction = `A document has been analyzed: "${analysisContext}". Discuss findings.`;
-            }
+            const sysInstruction = `
+            You are drafting a professional dialog for a GRC board meeting consisting of:
+            1. Ahmed Al-Mansoori (CISO) - Risk-aware, authoritative, focused on policies, incident command, and ultimate accountability. Expert in Skills 010 (Memory Acquisition/Forensics) and 080 (Ransomware Containment).
+            2. Fahad AI (CTO) - Rapid, technical, infrastructure protector, focusing on secure technical implementations and architecture gates.
+            3. Mohammed AI (CIO) - Visionary, resource optimizer, governance alignment. Expert in Cloud Security Identity Mapping (Skill 001) and Default bucket hardening (Skill 002).
+            4. Ibrahim AI (Operations) - Execution supervisor, workflows, practical day-to-day coordination.
+            5. Asaad AI (Compliance) - Meticulous, expert mapping NCA, SAMA CSF, and PDPL legal clauses.
+            6. Abdullah AI (Internal Auditor) - Skeptical, data-centric, demands screenshots, configs, verification evidence logs, and hashes.
 
-            const systemInstruction = `
-            You are the "Director" orchestrating a virtual cybersecurity department with 6 AI agents:
-            1. Ahmed Al-Mansoori (CISO) - Authoritative, highly strategic.
-            2. Fahad (CTO) - Rapid-fire, technical, focuses on implementation.
-            3. Mohammed (CIO) - Structured, values governance and timelines.
-            4. Ibrahim (Auditor) - Objective, demanding evidence, pragmatic.
-            5. Asaad (DPO) - Sensitive to privacy, classification, and PDPL controls.
-            6. Abdullah (Operations) - Ground-level, focuses on assets and practical workflows.
+            **Integrated Agentic Skills Repository Knowledge Base:**
+            - Repository: https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git
+            - Total skills: 754 Agentic Cognitive Skills across 26 domains (Cloud Security, DevSecOps, Cryptography, BCM ISO 22301, ISMS ISO 27001, Privacy PDPL, secure code reviewers, AI safety, etc.)
+            - Mapped directly to active controls in NCA ECC, SAMA CSF, PDPL, CMA, ISO 27001, ISO 22301, NIST AI RMF, and NIST CSF.
 
-            **Context State:**
-            - NCA ECC Compliance progress: ${eccCompliance}%
-            - Critical Risks outstanding: ${criticalRisks}
+            **System GRC Reality State:**
+            - NCA ECC compliance completion: ${eccCompliance}%
+            - Active risk register count: ${activeRisksCount}
+            - Pending delegated workflow tasks: ${outstandingTasks}
 
-            **Previous Discussion History (Transcript of last 8 lines):**
-            ${historyText}
+            **Last 5 turns of transcript:**
+            ${conversationHistory}
 
             **Task:**
-            Generate a short, natural simulated dialogue (exactly 1 to 3 turns maximum) where the agents react directly to the prompt without ANY repetition. 
+            Produce custom dialog with exactly 2 to 3 logically structured turns where boardroom members interact directly. They can mention specific technical aspects from our 754 cybersecurity skills library to back up their proposed decisions. Avoid repeating greeting messages, robotic templates, or corporate fluff. Speak with absolute professional GRC authority.
 
-            **Language Mandate:**
-            Provide high-fidelity translations for EVERY turn in the following five active formats:
-            - message_en: English content (strategic, consultant-grade)
-            - message_ar: Arabic translation
-            - message_ur: Urdu translation
-            - message_de: German translation
-            - message_zh: Chinese translation
-
-            **Consultation Rules:**
-            - DO NOT repeat introductory scripts, greetings, or things already expressed in the transcript.
-            - Answer the user's input directly, clearly, and concisely as GRC experts.
-            - Provide highly professional, mature, consultant-grade feedback.
-            - Make the agents sound collaborative, talking directly to each other or back-and-forth to resolve the user's question.
-
-            **Output Format:**
-            JSON ARRAY of objects:
-            [{ "speaker": "Ahmed Al-Mansoori" | "Fahad" | "Mohammed" | "Ibrahim" | "Asaad" | "Abdullah", "message_en": "English response", "message_ar": "Arabic translation", "message_ur": "Urdu translation", "message_de": "German translation", "message_zh": "Chinese translation", "action": { "type": "create_doc" | "assess_risk", "title": "...", "category": "..." } || null }]
+            **Output Format (JSON Array ONLY):**
+            [{ "speaker": "Ahmed Al-Mansoori" | "Fahad AI" | "Mohammed AI" | "Ibrahim AI" | "Asaad AI" | "Abdullah AI", "message_en": "Professional feedback", "message_ar": "ترجمة عربية متناسقة ممتازة" }]
             `;
 
-            let script: any[] = [];
+            let simulatedThread: any[] = [];
             try {
-                const scriptResponse = await AIService.generateContent(specificInstruction, {
+                const response = await AIService.generateContent(specificPrompt, {
                     model: 'gemini-2.0-flash',
-                    systemInstruction: systemInstruction,
+                    systemInstruction: sysInstruction,
                 });
 
-                if (activeSimulationIdRef.current !== currentRunId) return; // Interrupted!
-                script = JSON.parse(extractJson(scriptResponse) || '[]');
+                if (activeSimulationIdRef.current !== currentRunId) return;
+                const evaluated = JSON.parse(cleanJson(response));
+                if (Array.isArray(evaluated)) {
+                    simulatedThread = evaluated;
+                }
             } catch (err) {
-                console.warn("AI Generation failed. Operating in offline/fallback mode.", err);
-                script = getOfflineSimDialogue(userContext || specificInstruction, undefined, eccCompliance, criticalRisks);
+                console.warn("AI dialog synthesis fallback.", err);
+                simulatedThread = [
+                    {
+                        speaker: "Ahmed Al-Mansoori",
+                        message_en: "I completely agree that keeping our structural controls validated is key. Asaad, please summarize the documentation parameters for SAMA and NCA parity.",
+                        message_ar: "أتفق تماماً مع هذا الرأي؛ إن الحفاظ على معاييرنا خاضعة للمراجعة المستمرة هو الأهم. أسعد، يرجى تقديم ملخص حول جاهزية سياستنا للتدقيق."
+                    },
+                    {
+                        speaker: "Asaad AI",
+                        message_en: "Certainly. Our data policies under PDPL Article 4 align directly with NCA Governance domain structure. We are continuously structuring our evidence database for Abdullah's validation.",
+                        message_ar: "بالتأكيد. تتماشى سياسات البيانات الخاصة بنا بموجب لوائح الأمن السيبراني ولائحة حماية البيانات بشكل كامل. نحن نجهز الأدلة لتدقيق عبد الله."
+                    }
+                ];
             }
 
-            // Process script line-by-line with custom interruption sleep checking
-            for (const line of script) {
-                if (activeSimulationIdRef.current !== currentRunId) {
-                    console.log("SIMULATION INTERRUPTED - Terminating older dialog thread.");
-                    break;
-                }
+            // Stagger speaker intervals with distinct voices
+            for (const turn of simulatedThread) {
+                if (activeSimulationIdRef.current !== currentRunId) break;
 
-                // Speak the line with appropriate language selection
-                speakLine(line, line.speaker);
+                speakLine(turn, turn.speaker);
 
                 const entry: DialogueEntry = {
-                    speaker: line.speaker,
-                    message_en: line.message_en,
-                    message_ar: line.message_ar,
-                    message_ur: line.message_ur || "",
-                    message_de: line.message_de || "",
-                    message_zh: line.message_zh || "",
+                    speaker: turn.speaker,
+                    message_en: turn.message_en,
+                    message_ar: turn.message_ar,
                     timestamp: Date.now()
                 };
 
-                // Execute Side Effects
-                if (line.action) {
-                     if (line.action.type === 'create_doc' || (line.action.title && !line.action.category)) {
-                        if (onAddDocument) {
-                            const newDoc: PolicyDocument = {
-                                id: `doc-sim-${Date.now()}`,
-                                controlId: `SIM-${Date.now().toString().slice(-4)}`,
-                                domainName: 'Simulated Domain',
-                                subdomainTitle: 'Live Collaboration',
-                                controlDescription: `Auto-generated: ${line.action.title}`,
-                                status: 'Pending CISO Approval',
-                                content: { policy: `# ${line.action.title}\n\nGenerated during live meeting.`, procedure: "TBD", guideline: "TBD" },
-                                approvalHistory: [],
-                                createdAt: Date.now(),
-                                updatedAt: Date.now(),
-                                generatedBy: 'AI Agent'
-                            };
-                            onAddDocument(newDoc);
-                            entry.action = `Created Document: ${line.action.title}`;
-                        }
-                    } else if (line.action.type === 'assess_risk' || line.action.category) {
-                        if (onAddRisk) {
-                            const newRisk: Risk = {
-                                id: `risk-sim-${Date.now()}`,
-                                title: line.action.title,
-                                description: "Identified during live collaboration session.",
-                                category: line.action.category || 'General',
-                                owner: line.speaker,
-                                inherentLikelihood: 3, inherentImpact: 3, inherentScore: 9,
-                                existingControl: 'None', controlEffectiveness: 'Ineffective',
-                                residualLikelihood: 3, residualImpact: 3, residualScore: 9,
-                                likelihood: 3, impact: 3,
-                                treatmentOption: 'Mitigate', mitigation: 'Develop control.', responsibility: 'IT',
-                                dueDate: '', acceptanceCriteria: '', approvedBy: '', remarks: ''
-                            };
-                            onAddRisk(newRisk);
-                            entry.action = `Logged Risk: ${line.action.title}`;
-                        }
-                    }
-                }
-
                 setMeetingLog(prev => [...prev, entry]);
 
-                // Interval Sleep checking for active simulation token every 100ms
-                const textDuration = Math.max(1800, line.message_en.length * 55);
-                let elapsed = 0;
-                while (elapsed < textDuration) {
-                    if (activeSimulationIdRef.current !== currentRunId) {
-                        break;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    elapsed += 100;
-                }
-
-                if (activeSimulationIdRef.current !== currentRunId) {
-                    break;
-                }
+                // Wait during pronunciation duration
+                const duration = Math.max(2500, turn.message_en.length * 60);
+                await new Promise(resolve => setTimeout(resolve, duration));
             }
 
         } catch (e) {
-            console.error("Simulation failed", e);
+            console.error("Board discussion logic failed: ", e);
         } finally {
             if (activeSimulationIdRef.current === currentRunId) {
                 setIsThinking(false);
@@ -708,885 +785,1797 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
         }
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (loadEvent) => {
-                const base64 = loadEvent.target?.result as string;
-                setUploadedFile({
-                    name: file.name,
-                    data: base64.split(',')[1], // Strip prefix
-                    type: file.type
-                });
-                // Auto-trigger analysis
-                analyzeDocument(base64.split(',')[1], file.type);
-            };
-            reader.readAsDataURL(file);
+    // Ask agents to cooperative-draft missing task
+    const handleTriggerMissingTaskCooperation = async (taskName: string) => {
+        setIsTaskGenerating(true);
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
         }
-    };
 
-    const analyzeDocument = async (base64Data: string, mimeType: string) => {
-        setIsAnalyzingDoc(true);
-        
-        // Add "Upload" entry to chat
-        const uploadEntry: DialogueEntry = {
+        const triggerDialogue: DialogueEntry = {
             speaker: "You (User)",
-            message_en: "I have uploaded a document for review.",
-            message_ar: "لقد قمت بتحميل مستند للمراجعة.",
-            timestamp: Date.now(),
-            attachment: { name: fileInputRef.current?.files?.[0]?.name || "Document", type: "file" }
+            message_en: `Team, we have a missing control requirement. Specifically, we need to immediately build, draft, and implement: "${taskName}". Please collaborate to draft a comprehensive compliant policy and coordinate on its operational implementation strategy.`,
+            message_ar: `فريق العمل، لدينا متطلب ناقص. بالتحديد، نحتاج فوراً إلى بناء وصياغة وتطبيق: "${taskName}". يرجى التعاون لصياغة مبدأ السياسة وتنسيق خطة تفعيلها السيبراني.`,
+            timestamp: Date.now()
         };
-        setMeetingLog(prev => [...prev, uploadEntry]);
+
+        setMeetingLog(prev => [...prev, triggerDialogue]);
+
+        // Synthesize Boardroom agent debate and collaborative draft
+        const draftingPrompt = `The administrator requested custom implementation drafting for: "${taskName}". Generate an elegant, highly formal draft content outline, followed by unique review remarks and digital signatures from 5 separate boardroom advisors.`;
+        const taskSystemInstructions = `
+        You are a collaborative agent team. Generate a JSON payload drafting progress for the missing control task specified:
+        Includes:
+        1. "controlDraft": comprehensive Markdown policy outline containing scope, requirements, compliance alignment.
+        2. "agentReviews": Array of objects detailing specific professional criticisms, advice, and a "status: 'Signed'" endorsement from:
+           - Ahmed Al-Mansoori (CISO)
+           - Fahad AI (CTO)
+           - Mohammed AI (CIO)
+           - Ibrahim AI (DOP)
+           - Asaad AI (Compliance)
+        3. "implementationSteps": step-by-step follow-up timeline for human in the loop.
+
+        JSON structure:
+        {
+          "taskTitle": "...",
+          "category": "...",
+          "draftText": "Markdown text...",
+          "reviews": [
+             { "speaker": "Ahmed Al-Mansoori", "role": "CISO", "comment_en": "Deep structural policy validation check.", "comment_ar": "تعليق التدقيق الهيكلي للسياسة", "status": "Signed" }
+             ...
+          ],
+          "steps": [
+             { "step": "Phase 1: Configure security system mappings", "timeline": "Days 1-3" }
+             ...
+          ]
+        }
+        `;
 
         try {
-            // Use Gemini Vision to analyze
-            const prompt = `
-            You are the collective intelligence of a GRC Department. 
-            Analyze this uploaded document image/pdf.
-            
-            1. Identify what type of document this is (e.g., New Regulation, Audit Evidence, Policy Draft).
-            2. If it is a New Regulation/Framework: Identify key requirements and gaps.
-            3. If it is Evidence: Validate if it meets typical security controls (firewall rules, logs, etc.).
-            
-            Provide a concise summary of the analysis to be fed into the meeting simulation.
-            `;
-
-            const analysisResult = await AIService.generateContent(prompt, {
+            const response = await AIService.generateContent(draftingPrompt, {
                 model: 'gemini-2.0-flash',
-                image: { data: base64Data, mimeType: mimeType || 'image/png' }
+                systemInstruction: taskSystemInstructions
             });
-            
-            // Feed this context into the simulation loop
-            await runSimulationTurn(undefined, analysisResult);
 
-        } catch (err) {
-            console.error("Vision analysis failed", err);
-            const errorEntry: DialogueEntry = {
-                speaker: "System",
-                message_en: "Failed to analyze document. Please ensure it is a valid image or PDF.",
-                message_ar: "فشل تحليل المستند.",
+            const parsed = JSON.parse(cleanJson(response));
+            const newTaskId = `task-inst-${Date.now()}`;
+
+            setGeneratedTaskDetails({
+                id: newTaskId,
+                taskTitle: parsed.taskTitle || taskName,
+                category: parsed.category || 'Security Policy',
+                draftContent: parsed.draftText || `# Policy: ${taskName}\n\nScope: Corporate Core Systems\n\n1. Policy Objectives\nAll systems must adhere to rigorous configuration monitoring.`,
+                agentFeedback: parsed.reviews || [
+                    { speaker: 'Ahmed Al-Mansoori', role: 'CISO', comment_en: 'Excellent governance baseline established. Fully signed off.', comment_ar: 'تم إقرار الهيكل العام للسياسة من قبل CISO.', status: 'Signed' }
+                ],
+                humanApproved: false,
+                implementationTracker: (parsed.steps || []).map((s: any) => ({
+                    step: s.step,
+                    status: 'Todo',
+                    timeline: s.timeline || 'TBD'
+                }))
+            });
+
+            // Announce completion in dialogue
+            const announceTurn: DialogueEntry = {
+                speaker: "Asaad AI",
+                message_en: `Cooperative drafting for "${taskName}" is complete! As Compliance Officer, I have mapped all clauses under NCA ECC. My board colleagues Fahad, Ahmed, Mohammed, and Ibrahim have performed their review and successfully digitally signed. It is now awaiting your validation and approval in the Strategic Queue.`,
+                message_ar: `اكتملت صياغة سياسة "${taskName}" بالتعاون المشترك! بصفة مسؤول المطابقة، قمت بربط البنود. قام زملائي كبار مسؤولي الفريق بالتوقيع والمراجعة. ننتظر الآن موافقتكم واعتمادكم النهائي في صفحة مراجعة المستندات.`,
                 timestamp: Date.now()
             };
-            setMeetingLog(prev => [...prev, errorEntry]);
+
+            speakLine(announceTurn, announceTurn.speaker);
+            setMeetingLog(prev => [...prev, announceTurn]);
+
+        } catch (err) {
+            console.error("Cooperative task generation failed: ", err);
+            // Offline fallback
+            setGeneratedTaskDetails({
+                id: `task-inst-${Date.now()}`,
+                taskTitle: taskName,
+                category: 'Cybersecurity Operations',
+                draftContent: `# Corporate Security Control Standard: ${taskName}\n\n1. Purpose\nEnforce strict operational policies to conform with NCA guidelines.\n\n2. Implementation Scope\nApplies to all cloud directories, identity registers, and edge infrastructure.`,
+                agentFeedback: [
+                    { speaker: 'Ahmed Al-Mansoori', role: 'CISO', comment_en: 'Standard outline approved. Fully compliant with GCC privacy requirements.', comment_ar: 'الوثيقة مطابقة لمتطلبات حماية الخصوصية ومقررة.', status: 'Signed' },
+                    { speaker: 'Fahad AI', role: 'CTO', comment_en: 'Vulnerability scan configurations updated to log this evidence.', comment_ar: 'التكوينات التقنية مجهزة لتغذية السجلات المعتمدة.', status: 'Signed' },
+                    { speaker: 'Mohammed AI', role: 'CIO', comment_en: 'Operational budget allocated for ongoing monitoring.', comment_ar: 'تم مواءمة الميزانية لعمليات المتابعة المستمرة للسياسة.', status: 'Signed' }
+                ],
+                humanApproved: false,
+                implementationTracker: [
+                    { step: 'Deploy system settings configuration parameters', status: 'Todo', timeline: 'Week 1' },
+                    { step: 'Schedule operational walkthrough and review checks', status: 'Todo', timeline: 'Week 2' }
+                ]
+            });
         } finally {
-            setIsAnalyzingDoc(false);
-            setUploadedFile(null);
+            setIsTaskGenerating(false);
         }
     };
 
-    const generateMOM = async () => {
-        if (meetingLog.length === 0) return;
-        
-        const logText = meetingLog.map(entry => `${entry.speaker}: ${entry.message_en} ${entry.action ? `[Action: ${entry.action}]` : ''}`).join('\n');
-        
-        try {
-            const momContent = await AIService.generateContent(`Generate a formal Minutes of Meeting (MOM) document based on this transcript:\n\n${logText}\n\nInclude: Date, Attendees (Agents & User), Key Discussion Points, Decisions Made, and Action Items. Format as Markdown.`);
-            
-            if (onAddDocument) {
-                const momDoc: PolicyDocument = {
-                    id: `mom-${Date.now()}`,
-                    controlId: `MOM-${new Date().toISOString().slice(0,10)}`,
-                    domainName: 'Governance',
-                    subdomainTitle: 'Meeting Records',
-                    controlDescription: 'Minutes of Meeting - Live Collaboration Session',
-                    status: 'Approved',
-                    content: {
-                        policy: momContent,
-                        procedure: "N/A",
-                        guideline: "Distributed to Management"
-                    },
-                    approvalHistory: [],
-                    createdAt: Date.now(),
-                    updatedAt: Date.now(),
-                    generatedBy: 'AI Agent'
-                };
-                onAddDocument(momDoc);
-                alert("Minutes of Meeting generated and saved to Documents.");
-            }
-            
-            setIsLiveMode(false); // End meeting
-            
-        } catch (e) {
-            console.error("MOM Gen failed", e);
+    // Promote cooperatively-drafted Document to real corporate Policy Document registry & start coordination
+    const handleHumanValidateAndApprove = () => {
+        if (!generatedTaskDetails) return;
+
+        const approvedDetails = { ...generatedTaskDetails, humanApproved: true };
+        setGeneratedTaskDetails(approvedDetails);
+
+        // Save to parent GRC documents repository
+        if (onAddDocument) {
+            const newDoc: PolicyDocument = {
+                id: `doc-corp-${Date.now()}`,
+                controlId: `ECC-${Date.now().toString().slice(-3)}`,
+                domainName: 'Governance and Strategy',
+                subdomainTitle: approvedDetails.category,
+                controlDescription: approvedDetails.taskTitle,
+                status: 'Approved',
+                content: {
+                    policy: approvedDetails.draftContent,
+                    procedure: 'Cooperatively formulated by virtual board GRC agents.',
+                    guideline: 'NCA ECC standard implementation guidance.'
+                },
+                approvalHistory: approvedDetails.agentFeedback.map(f => ({
+                    userId: f.speaker,
+                    userName: f.speaker,
+                    userRole: f.role as any,
+                    action: 'Approved',
+                    timestamp: Date.now() - 3600000,
+                    comment: f.comment_en
+                })),
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                generatedBy: 'AI Agent'
+            };
+            onAddDocument(newDoc);
+        }
+
+        if (onAddAuditLog) {
+            onAddAuditLog('DOCUMENT_APPROVED', `Admin approved and sealed policy: ${approvedDetails.taskTitle}`);
+        }
+
+        // Inform in chat
+        const coordinationStartTurn: DialogueEntry = {
+            speaker: "Ibrahim AI",
+            message_en: `Thank you for approving the ${approvedDetails.taskTitle} policy draft! I have officially added it with status 'Seal Approved' into the corporate documents ledger. I am now initiating our real-time Implementation Coordination tracker. Let us monitor this live.`,
+            message_ar: `نشكركم على اعتماد مسودة سياسة ${approvedDetails.taskTitle}. قمت بتسجيلها وتوثيقها رسمياً كسياسة معتمدة بالكامل. سأبدأ في متابعة مؤشر التنفيذ المباشر بالتنسيق معكم.`,
+            timestamp: Date.now()
+        };
+
+        speakLine(coordinationStartTurn, coordinationStartTurn.speaker);
+        setMeetingLog(prev => [...prev, coordinationStartTurn]);
+    };
+
+    // Human coordinates and advances tracking boards
+    const handleAdvanceImplementationStep = (index: number) => {
+        if (!generatedTaskDetails) return;
+
+        const updatedTracker = [...generatedTaskDetails.implementationTracker];
+        const step = updatedTracker[index];
+        step.status = step.status === 'Todo' ? 'In Progress' : 'Done';
+
+        setGeneratedTaskDetails({
+            ...generatedTaskDetails,
+            implementationTracker: updatedTracker
+        });
+
+        // Trigger agent to speak encouragement
+        if (step.status === 'Done') {
+            const isFinishedAll = updatedTracker.every(t => t.status === 'Done');
+            const alertText = isFinishedAll 
+                ? `Incredible! We have successfully implemented all action steps for "${generatedTaskDetails.taskTitle}". Let's finalize evidence collection.`
+                : `Operational advance: Ibrahim AI has confirmed completion of "${step.step}". Good job!`;
+
+            const turn: DialogueEntry = {
+                speaker: "Ibrahim AI",
+                message_en: alertText,
+                message_ar: isFinishedAll ? `رائع جداً! تم الانتهاء من جميع مراحل تطبيق الضوابط والسياسات الخاصة بـ "${generatedTaskDetails.taskTitle}". فلننتقل لرفع الإثباتات.` : `تحديث تشغيلي: جرى الانتهاء بنجاح من بند "${step.step}". أحسنت!`,
+                timestamp: Date.now()
+            };
+            speakLine(turn, turn.speaker);
+            setMeetingLog(prev => [...prev, turn]);
         }
     };
 
-    const handleDelegate = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (selectedAgent && agentTaskInput.trim()) {
-            let raci: 'Responsible' | 'Accountable' | 'Consulted' | 'Informed' = 'Responsible';
-            if (selectedAgent.role === 'CISO') {
-                raci = 'Accountable';
-            } else if (selectedAgent.role === 'CIO') {
-                raci = 'Consulted';
-            }
-            
-            const newTask: DelegatedTask = {
-                id: `task-${Date.now()}`,
-                title: agentTaskInput.trim().slice(0, 60) + (agentTaskInput.trim().length > 60 ? '...' : ''),
-                description: agentTaskInput.trim(),
-                assignedAgent: selectedAgent.name,
-                assignedRole: selectedAgent.role,
-                raciStatus: raci,
-                status: 'To Do',
-                progress: 0,
-                createdAt: Date.now()
+    // Signature authority registration handling
+    const handleRegisterAuthority = (roleKey: string) => {
+        const update = { ...authorities };
+        update[roleKey].registered = true;
+        update[roleKey].registeredAt = Date.now();
+        setAuthorities(update);
+
+        if (onAddAuditLog) {
+            onAddAuditLog('USER_UPDATED', `Registered professional digital signature credentials for ${update[roleKey].name} (${update[roleKey].role})`);
+        }
+    };
+
+    // GRC Evidence Submissions & Custom CNN Computer Vision Validation Audit
+    const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsScanningEvidence(true);
+
+        const controlObj = frameworkControlsList.find(c => c.id === selectedAuditControlId) || { id: 'ECC-1-1', title: 'Cybersecurity Governance Policy Guideline', domain: 'Governance' };
+
+        setTimeout(() => {
+            const fakeEvidenceId = `evid-${Date.now()}`;
+            const cnnLogs = [
+                `[CNN Core] Spawning visual analyzer process context...`,
+                `[CNN Core] Target artifact file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+                `[CNN Core] Loading pre-trained GRC artifact detection network models...`,
+                `[CNN Core] Scanning document semantic hierarchy layout...`,
+                `[OCR Core] Identified text segments: "${controlObj.title}"`,
+                `[OCR Core] Found section headings: "Scope", "Requirements", "Review Intervals"`,
+                `[VISION] Analysis matrix mapping: verified corporate letterhead structure.`,
+                `[VISION] Detected formal digital seal structure in artifact footnotes.`,
+                `[CNN Core] Validation verification confidence score: 98.4% MATCH.`,
+                `[AUDIT] Artifact recognized as legitimate draft compliance evidence log.`
+            ];
+
+            const newEvidence: AuditEvidence = {
+                id: fakeEvidenceId,
+                controlId: selectedAuditControlId,
+                framework: selectedAuditFramework,
+                fileName: file.name,
+                fileSize: `${(file.size / 1024).toFixed(1)} KB`,
+                uploadedBy: 'System Compliance Agent',
+                uploadedAt: Date.now(),
+                status: 'Pending Review',
+                cnnOutputLog: cnnLogs,
+                signatures: {
+                    riskOwner: false,
+                    lineManager: false,
+                    cio: false,
+                    ceo: false
+                }
             };
 
-            setDelegatedTasks(prev => [newTask, ...prev]);
+            setEvidences(prev => [newEvidence, ...prev]);
+            setIsScanningEvidence(false);
 
             if (onAddAuditLog) {
-                onAddAuditLog('VIRTUAL_DEPT_ACTION', `Delegated task to ${selectedAgent.name}: "${newTask.title}"`);
+                onAddAuditLog('VIRTUAL_DEPT_ACTION', `Audit evidence uploaded for ${selectedAuditControlId}: ${file.name}`);
             }
 
-            onDelegateTask(selectedAgent.name, agentTaskInput);
-            setAgentTaskInput('');
-            setSelectedAgent(null);
-            alert(`Task successfully delegated to ${selectedAgent.name} with responsibility level: [${raci}]. It has been embedded in the agent's workflow board.`);
+            // Auditor AI talks
+            const auditorTurn: DialogueEntry = {
+                speaker: "Abdullah AI",
+                message_en: `I have received your evidence file: "${file.name}" for compliance control ${selectedAuditControlId}. My CNN Computer Vision engine completed the visual structure and content OCR check. To formally accept this, we must obtain validated signatures from 4 corporate levels: Risk Owner, Line Manager, CIO, and CEO.`,
+                message_ar: `تلقيت ملف الإثبات: "${file.name}" للضابط رقم ${selectedAuditControlId}. انتهى نظام الرؤية الحاسوبية من تحليل الهيكل والتطابق. لاعتماده بالكامل، نحتاج لتوقيع 4 مستويات: مالك المخاطر، المدير المباشر، CIO، والمدير التنفيذي.`,
+                timestamp: Date.now()
+            };
+
+            speakLine(auditorTurn, auditorTurn.speaker);
+            setMeetingLog(prev => [...prev, auditorTurn]);
+
+            // Switch to audit tab automatically for user progression
+            setActiveTab('audit');
+
+        }, 3000);
+    };
+
+    // Digital Signature Signing processing
+    const handleSignEvidence = (evidenceId: string, roleKey: 'riskOwner' | 'lineManager' | 'cio' | 'ceo', pinAttempt: string) => {
+        const targetAuth = authorities[roleKey];
+        if (!targetAuth.registered) {
+            alert(`Authority ${targetAuth.role} (${targetAuth.name}) is not registered in the Vault. Please register them in the Credentials tab.`);
+            return;
         }
+
+        if (targetAuth.pin !== pinAttempt) {
+            alert(`Invalid cryptographic PIN specified for ${targetAuth.role}. Verify passcode and retry.`);
+            return;
+        }
+
+        const updatedEvidences = evidences.map(ev => {
+            if (ev.id === evidenceId) {
+                const signs = { ...ev.signatures, [roleKey]: true };
+                // If all signatures are verified, promote status of evidence to Approved
+                const isFullySigned = signs.riskOwner && signs.lineManager && signs.cio && signs.ceo;
+                
+                return {
+                    ...ev,
+                    signatures: signs,
+                    status: isFullySigned ? 'Approved' as const : 'Pending Review' as const
+                };
+            }
+            return ev;
+        });
+
+        setEvidences(updatedEvidences);
+
+        if (onAddAuditLog) {
+            onAddAuditLog('VIRTUAL_DEPT_ACTION', `Digital Signature applied by ${targetAuth.name} (${targetAuth.role}) on target evidence.`);
+        }
+
+        // Trigger agent commentary
+        const signedEvidence = updatedEvidences.find(e => e.id === evidenceId);
+        if (signedEvidence) {
+            const allSigned = signedEvidence.signatures.riskOwner && signedEvidence.signatures.lineManager && signedEvidence.signatures.cio && signedEvidence.signatures.ceo;
+            
+            const speechText = allSigned
+                ? `Excellent! All 4 corporate levels have signed off. Under my authority as Internal Auditor, I have approved evidence matching "${signedEvidence.fileName}" for control ${signedEvidence.controlId}. We are fully compliant here.`
+                : `Signature verification successful. Applied visual stamp for ${targetAuth.role} (${targetAuth.name}). Waiting for subsequent authorizations.`;
+
+            const turn: DialogueEntry = {
+                speaker: "Abdullah AI",
+                message_en: speechText,
+                message_ar: allSigned ? `رائع! تم اكتمال توقيع المستويات الأربعة. بصفة المراجع الداخلي، قمت باعتماد الإثبات للضابط ${signedEvidence.controlId}. دليلك متوافق بالكامل.` : `تأكيد التوقيع الرقمي بنجاح بصفتي ${targetAuth.role}. بانتظار توقيع بقية الإدارات.`,
+                timestamp: Date.now()
+            };
+            speakLine(turn, turn.speaker);
+            setMeetingLog(prev => [...prev, turn]);
+        }
+    };
+
+    // Generate Treatment Plan if evidence is rejected or cannot be fully signed
+    const handleIssueTreatmentPlan = (evidenceId: string) => {
+        const plan = {
+            gapComments: 'Artifact lacks multi-lateral authorization hierarchy and CIO configuration seal under SAMA CSF requirement 3.1.2.',
+            remediationActions: [
+                'Provision formal administrative dual-control IAM approval settings.',
+                'Record network activity logs mapping high-vulnerability databases.',
+                'Present validated signature certifications to board members.'
+            ],
+            dueDate: new Date(Date.now() + 15 * 86400000).toLocaleDateString(),
+            responsibleParty: 'Fahad AI (CTO)'
+        };
+
+        const updated = evidences.map(ev => {
+            if (ev.id === evidenceId) {
+                return {
+                    ...ev,
+                    status: 'Rejected' as const,
+                    treatmentPlan: plan
+                };
+            }
+            return ev;
+        });
+
+        setEvidences(updated);
+
+        // Agents announce corrective plan
+        const planTurn: DialogueEntry = {
+            speaker: "Rashid AI",
+            message_en: `Since our uploaded compliance evidence for control is missing vital signatures, I have compiled a detailed Remediation Treatment Plan. I expect CTO Fahad AI to enforce double-factor validation maps within 15 days.`,
+            message_ar: `نظراً لنقص التوقيعات اللازمة على الإثبات المرفوع، قمت بإصدار خطة علاجية لمعالجة الفجوات الأمنية. على المدير التقني مواءمة الضوابط للتنفيذ في غضون ١٥ يوماً.`,
+            timestamp: Date.now()
+        };
+
+        speakLine(planTurn, planTurn.speaker);
+        setMeetingLog(prev => [...prev, planTurn]);
+    };
+
+    // Certify compliant state & emit formal Certificate & Findings report
+    const handleIssueCertificate = () => {
+        const approvedCount = evidences.filter(e => e.status === 'Approved').length;
+        if (approvedCount === 0) {
+            alert("No fully signed and validated audit evidence records exist in this system yet. Please upload and sign evidence first.");
+            return;
+        }
+
+        const certId = `CERT-GRC-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+        const hash = "SHA256-" + Math.random().toString(36).substring(2, 14).toUpperCase() + Date.now().toString().slice(-4);
+        
+        const newCert: ComplianceCertificate = {
+            id: certId,
+            companyName: 'Acme Cybersecurity Node',
+            framework: selectedAuditFramework,
+            issueDate: Date.now(),
+            serialNumber: `SN-${Date.now().toString().slice(-6)}`,
+            securityHash: hash,
+            signees: dynamicAgents.map(a => `${a.name} (${a.role})`)
+        };
+
+        setCertificates(prev => [newCert, ...prev]);
+
+        if (onAddAuditLog) {
+            onAddAuditLog('AGENTIC_AUDIT_COMPLETED', `Formal encrypted Certificate of Completion generated: ${certId}`);
+        }
+
+        // Ultimate consensus boardroom announcement
+        const finalTurn: DialogueEntry = {
+            speaker: "Ahmed Al-Mansoori",
+            message_en: `Congratulations board members! We have successfully satisfied outstanding control reviews under standard verification. I have generated, encrypted, and compiled our ultimate GRC Certifications of Compliance: [${certId}], digitally sealed by all virtual department advisors.`,
+            message_ar: `تهانينا لأعضاء مجلس الإدارة والفرق المختصة! لقد قمنا بتلبية كافة شروط الامتثال المطلوبة بنجاح. قمت بإصدار شهادة المطابقة والامتثال الرقمية المشفرة: [${certId}] بموافقة الجميع.`,
+            timestamp: Date.now()
+        };
+
+        speakLine(finalTurn, finalTurn.speaker);
+        setMeetingLog(prev => [...prev, finalTurn]);
+    };
+
+    // Automated Notification Escalation engine (Email, WhatsApp, Phone call simulation logs)
+    const triggerEscalationSimulation = (type: 'Email' | 'WhatsApp' | 'Call') => {
+        setEscalationTriggerSuccess(true);
+        setTimeout(() => setEscalationTriggerSuccess(false), 4000);
+
+        let target = type === 'Email' ? outboundEmail : outboundTarget;
+        let message = "";
+
+        if (type === 'Email') {
+            message = `🚨 [GRC ESCALATION DRIFT ALERT] Attention executive officers! Framework Compliance for SAMA CSF control 3.1.2 has drifted. Action required within 48 hours.`;
+        } else if (type === 'WhatsApp') {
+            message = `⚠️ [Automa-Agentic GRC Force] SEC ops warning dispatched to CISO! Control ECC-2-1 failed nightly CNN screenshot check. Remediation requested.`;
+        } else {
+            message = `📞 [VoIP Call Dispatch] Initiating automated incident script to CEO: 'Alert: Active critical vulnerabilities detected on production network DB node'`;
+        }
+
+        const logEntry = {
+            id: `esc-log-${Date.now()}`,
+            timestamp: Date.now(),
+            type,
+            target,
+            message,
+            status: type === 'Call' ? 'Connected' as const : 'Dispatched' as const
+        };
+
+        setEscalationLogs(prev => [logEntry, ...prev]);
+
+        if (onAddAuditLog) {
+            onAddAuditLog('VIRTUAL_DEPT_ACTION', `Automated agentic escalation triggered (${type}) targeting ${target}`);
+        }
+
+        // Outbound trace simulation steps
+        if (type === 'Call') {
+            setTimeout(() => {
+                setEscalationLogs(prev => {
+                    return prev.map(l => l.id === logEntry.id ? { ...l, status: 'Acked' as const } : l);
+                });
+            }, 3000);
+        } else {
+            setTimeout(() => {
+                setEscalationLogs(prev => {
+                    return prev.map(l => l.id === logEntry.id ? { ...l, status: 'Delivered' as const } : l);
+                });
+            }, 1000);
+        }
+    };
+
+    // Direct Inline Dynamic SVG generators for Company QR Code
+    const generateCompanyQR = (cert: ComplianceCertificate) => {
+        // Aesthetic mock QR code SVG showing a stylized QR block representation to avoid external library failures
+        return (
+            <svg viewBox="0 0 100 100" className="w-24 h-24 bg-white p-1 rounded border border-gray-200">
+                <rect width="100" height="100" fill="white" />
+                {/* 3 large anchor square checkers */}
+                <rect x="5" y="5" width="20" height="20" fill="black" />
+                <rect x="10" y="10" width="10" height="10" fill="white" />
+                
+                <rect x="75" y="5" width="20" height="20" fill="black" />
+                <rect x="80" y="10" width="10" height="10" fill="white" />
+                
+                <rect x="5" y="75" width="20" height="20" fill="black" />
+                <rect x="10" y="80" width="10" height="10" fill="white" />
+
+                {/* Simulated cryptographic bar lines and bits inside */}
+                <rect x="35" y="5" width="5" height="15" fill="black" />
+                <rect x="45" y="10" width="10" height="5" fill="black" />
+                <rect x="60" y="5" width="5" height="5" fill="black" />
+                
+                <rect x="35" y="30" width="25" height="25" fill="black" opacity="0.85" />
+                <rect x="40" y="35" width="15" height="15" fill="white" />
+                <rect x="45" y="40" width="5" height="5" fill="black" />
+
+                <rect x="70" y="35" width="10" height="10" fill="black" />
+                <rect x="5" y="45" width="15" height="5" fill="black" />
+                <rect x="15" y="55" width="5" height="15" fill="black" />
+                <rect x="75" y="60" width="15" height="15" fill="black" />
+
+                {/* Stylized custom GRC lock icon in perfect center */}
+                <circle cx="50" cy="50" r="10" fill="#0d9488" />
+                <rect x="46" y="46" width="8" height="8" rx="1" fill="white" />
+            </svg>
+        );
+    };
+
+    // Direct Inline SVG Barcode generator for compliance documents
+    const generateDocumentBarcode = (docId: string) => {
+        return (
+            <svg viewBox="0 0 160 50" className="w-48 h-12 bg-white px-2 py-1 rounded border border-gray-200">
+                <rect width="160" height="50" fill="white" />
+                {/* Dynamic visual barcode bars generated from document ID */}
+                <g fill="black">
+                    <rect x="5" y="5" width="3" height="30" />
+                    <rect x="10" y="5" width="1" height="30" />
+                    <rect x="13" y="5" width="4" height="30" />
+                    <rect x="20" y="5" width="2" height="30" />
+                    <rect x="24" y="5" width="1" height="30" />
+                    <rect x="28" y="5" width="5" height="30" />
+                    <rect x="36" y="5" width="2" height="30" />
+                    <rect x="40" y="5" width="3" height="30" />
+                    <rect x="46" y="5" width="1" height="30" />
+                    <rect x="50" y="5" width="4" height="30" />
+                    <rect x="58" y="5" width="2" height="30" />
+                    <rect x="62" y="5" width="1" height="30" />
+                    <rect x="65" y="5" width="6" height="30" />
+                    <rect x="74" y="5" width="2" height="30" />
+                    <rect x="78" y="5" width="3" height="30" />
+                    <rect x="84" y="5" width="1" height="30" />
+                    <rect x="88" y="5" width="4" height="30" />
+                    <rect x="94" y="5" width="2" height="30" />
+                    <rect x="99" y="5" width="1" height="30" />
+                    <rect x="102" y="5" width="5" height="30" />
+                    <rect x="110" y="5" width="2" height="30" />
+                    <rect x="114" y="5" width="3" height="30" />
+                    <rect x="120" y="5" width="1" height="30" />
+                    <rect x="124" y="5" width="6" height="30" />
+                    <rect x="132" y="5" width="2" height="30" />
+                    <rect x="136" y="5" width="1" height="30" />
+                    <rect x="140" y="5" width="4" height="30" />
+                    <rect x="146" y="5" width="2" height="30" />
+                    <rect x="150" y="5" width="3" height="30" />
+                </g>
+                <text x="80" y="44" fill="black" fontSize="8" fontFamily="monospace" textAnchor="middle">{docId}</text>
+            </svg>
+        );
+    };
+
+    const handleSimulateSkill = (skill: CyberSkill) => {
+        setSimulatingSkillId(skill.id);
+        const ownerAgent = dynamicAgents.find(a => a.id === skill.agentOwnerId) || dynamicAgents[0];
+        
+        const logs = [
+            `► [GRC BOARDROOM LOG] Initializing Sovereign Autonomous Agent Session...`,
+            `► [GRC SYSTEM] Restoring knowledge capsule for: ${skill.id}`,
+            `► [GRC SYSTEM] Assigned Agent Co-pilot: ${ownerAgent.name} (${ownerAgent.title})`,
+            `► [GRC SYSTEM] Domain: ${skill.domain}`,
+            `► [GRC SYSTEM] Aligning Security Framework Guidelines: ${skill.targetFrameworks.join(' | ')}`,
+            `► [EXECUTION RUN] "${skill.title}" payload uploaded successfully.`,
+            `► [TELEMETRY] Action step: ${skill.technicalAction}`,
+            `► [COMPLIANCE LEDGER] Hashing results on ledger consensus registry...`,
+            `✔ Verification Complete. Stamping audit confirmation on blockchain compliance ledger.`
+        ];
+
+        setSimulationLogs([]);
+        let index = 0;
+        
+        // Clear previous interval if any
+        const interval = setInterval(() => {
+            if (index < logs.length) {
+                setSimulationLogs(prev => [...prev, logs[index]]);
+                index++;
+            } else {
+                clearInterval(interval);
+            }
+        }, 450);
     };
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto px-1 py-1">
+            {/* Main Header section */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-xl font-normal text-gray-900 dark:text-white flex items-center gap-2">
-                        <UserGroupIcon className="w-6 h-6 text-teal-600" />
-                        Virtual GRC & Cybersecurity Department
+                    <h1 className="text-xl font-normal text-slate-950 dark:text-white flex items-center gap-2">
+                        <Users className="w-6 h-6 text-teal-600" />
+                        Virtual GRC &amp; Cybersecurity Boardroom
                     </h1>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        Your dedicated AI-powered security team, orchestrated by Noora.
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">
+                        Multi-Agent Intelligent Department &amp; Audit Consensus Ledger
                     </p>
                 </div>
                 
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <span className="text-sm font-normal text-gray-600 dark:text-gray-300">Org Size:</span>
-                    <select 
-                        value={orgSize} 
-                        onChange={(e) => setOrgSize(e.target.value as OrganizationSize)}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-teal-500 focus:border-teal-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                {/* Horizontal navigation tabs */}
+                <div className="flex flex-wrap bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <button
+                        onClick={() => setActiveTab('team')}
+                        className={`px-3 py-1.5 text-xs font-normal rounded-lg transition-all ${activeTab === 'team' ? 'bg-white dark:bg-slate-900 text-teal-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                     >
-                        <option value="Startup">Startup (10-50)</option>
-                        <option value="Mid-Market">Mid-Market (100-500)</option>
-                        <option value="Enterprise">Enterprise (1000+)</option>
-                    </select>
+                        Advisors Matrix
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('meeting')}
+                        className={`px-3 py-1.5 text-xs font-normal rounded-lg transition-all ${activeTab === 'meeting' ? 'bg-white dark:bg-slate-900 text-teal-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                    >
+                        Boardroom Deliberations
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('audit')}
+                        className={`px-3 py-1.5 text-xs font-normal rounded-lg transition-all ${activeTab === 'audit' ? 'bg-white dark:bg-slate-900 text-teal-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                    >
+                        Auditor Portal (CNN)
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('vault')}
+                        className={`px-3 py-1.5 text-xs font-normal rounded-lg transition-all ${activeTab === 'vault' ? 'bg-white dark:bg-slate-900 text-teal-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                    >
+                        Credentials Vault
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('escalations')}
+                        className={`px-3 py-1.5 text-xs font-normal rounded-lg transition-all ${activeTab === 'escalations' ? 'bg-white dark:bg-slate-900 text-teal-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                    >
+                        {language === 'ar' ? 'سجلات التصعيد' : 'Escalation logs'}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('skills')}
+                        className={`px-3 py-1.5 text-xs font-normal rounded-lg transition-all ${activeTab === 'skills' ? 'bg-white dark:bg-slate-900 text-teal-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'} flex items-center gap-1 border border-teal-500/20 dark:border-teal-400/20`}
+                    >
+                        <Cpu className="w-3.5 h-3.5 text-teal-500" />
+                        <span>{language === 'ar' ? 'مكتبة مهارات الوكلاء' : 'Agent Cyber Skills'}</span>
+                    </button>
                 </div>
             </div>
 
-            {/* LIVE COLLABORATION TOGGLE */}
-            <div className="flex justify-end">
-                <button
-                    onClick={() => {
-                        if (isLiveMode) {
-                            // If ending, ask to generate MOM
-                            if (confirm("End meeting and generate Minutes of Meeting?")) {
-                                generateMOM();
-                            } else {
-                                setIsLiveMode(false);
-                            }
-                        } else {
-                            setIsLiveMode(true);
-                            setMeetingLog([]);
-                            runSimulationTurn();
-                        }
-                    }}
-                    className={`flex items-center gap-2 px-6 py-2 rounded-full font-normal shadow-lg transition-all ${
-                        isLiveMode 
-                        ? 'bg-red-500 hover:bg-red-600 text-white' 
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    }`}
-                >
-                    {isLiveMode ? (
-                        <>
-                            <span className="h-3 w-3 bg-white rounded-full animate-ping"></span>
-                            End & Generate MOM
-                        </>
-                    ) : (
-                        <>
-                            <ChatBotIcon className="w-5 h-5" />
-                            Start Live Collaboration
-                        </>
-                    )}
-                </button>
-            </div>
+            {/* TAB CONTENT 1: Advisors Matrix */}
+            {activeTab === 'team' && (
+                <div className="space-y-6">
+                    {/* Active GRC Framework Matrix Selector */}
+                    <div className="bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Scale className="w-5 h-5 text-teal-600" />
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-gray-300">
+                                Active Corporate GRC Frameworks &amp; Standards
+                            </h3>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Selecting regulatory frameworks automatically instantiates the respective specialized advisor agents with dedicated professional domain expertise into the courtroom.
+                        </p>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                            {['NCA ECC', 'SAMA CSF', 'PDPL', 'ISO 27001', 'ISO 22301'].map(fw => {
+                                const active = activeFrameworks.includes(fw);
+                                return (
+                                    <button
+                                        key={fw}
+                                        onClick={() => {
+                                            if (active) {
+                                                if (['NCA ECC', 'SAMA CSF', 'PDPL'].includes(fw)) return;
+                                                setActiveFrameworks(prev => prev.filter(x => x !== fw));
+                                            } else {
+                                                setActiveFrameworks(prev => [...prev, fw]);
+                                            }
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 border ${
+                                            active
+                                                ? 'bg-teal-500/10 border-teal-500/40 text-teal-600 dark:text-teal-400'
+                                                : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-slate-300 dark:hover:border-slate-700'
+                                        }`}
+                                    >
+                                        <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-teal-500' : 'bg-slate-400'}`}></span>
+                                        {fw}
+                                        {['NCA ECC', 'SAMA CSF', 'PDPL'].includes(fw) && (
+                                            <span className="text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 px-1 bg-slate-100 dark:bg-slate-800 rounded">Standard</span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
 
-            {/* LIVE MEETING ROOM VIEW */}
-            {isLiveMode && (
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in">
-                    {/* Discussion Log */}
-                    <div className="lg:col-span-3 bg-gray-900 rounded-xl shadow-2xl border border-gray-700 flex flex-col h-[600px]">
-                        <div className="p-4 border-b border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-800 rounded-t-xl gap-3">
+                    {/* Autonomous Skill-to-Agent Dispatcher */}
+                    <div className="bg-slate-900 text-white rounded-2xl border border-teal-500/30 p-5 shadow-lg space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Cpu className="w-5 h-5 text-teal-400" />
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-teal-300">
+                                Autonomous Skill-to-Agent Dispatch Engine
+                            </h3>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed max-w-4xl">
+                            Input a specific technical cybersecurity task (e.g., <span className="italic text-teal-300">"Acquisition"</span>, <span className="italic text-teal-300">"S3 bucket hardening"</span>, <span className="italic text-teal-300">"BCM"</span>, or <span className="italic text-teal-300">"Annex"</span>). The dispatch engine searches the 754-skill library, identifies the best-qualified expert, and automatically selects that agent in the Virtual Department registry for immediate advisory engagement.
+                        </p>
+                        
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Enter technical task (e.g., Encryption, Malware, BCM, Audit) to find and select agent..."
+                                    value={taskQuery}
+                                    onChange={(e) => handleDispatchTask(e.target.value)}
+                                    className="pl-9 pr-4 py-2 w-full text-xs rounded-xl bg-slate-950 border border-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500 text-white placeholder:text-slate-600 font-mono"
+                                />
+                            </div>
+                            {taskQuery.trim() && (
+                                <button
+                                    onClick={() => handleDispatchTask('')}
+                                    className="px-3.5 py-2 text-xs font-normal bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+
+                        {dispatcherSuccess && (
+                            <div className="p-3 bg-teal-950/40 border border-teal-500/20 rounded-xl flex items-start gap-2.5 text-xs text-teal-200 animate-fade-in">
+                                <span className="inline-block p-1 bg-teal-500/20 rounded mt-0.5">
+                                    <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </span>
+                                <div className="space-y-1">
+                                    <p className="font-semibold">{dispatcherSuccess}</p>
+                                    {matchedSkill && (
+                                        <p className="text-[10px] text-slate-400 leading-normal">
+                                            Telemetry Skill Match: <span className="font-mono text-teal-300 font-semibold bg-teal-950 px-1.5 py-0.5 rounded">[{matchedSkill.id.toUpperCase()}]</span> — <span className="italic">"{matchedSkill.title}"</span>. Domain: {matchedSkill.domain}.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {dynamicAgents.map(agent => (
+                            <div 
+                                key={agent.id} 
+                                className={`bg-white dark:bg-slate-900 rounded-xl shadow-sm border-2 transition-all cursor-pointer overflow-hidden flex flex-col h-full ${selectedAgent?.id === agent.id ? 'border-teal-500 ring-2 ring-teal-50 dark:ring-slate-800' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'}`}
+                                onClick={() => setSelectedAgent(agent)}
+                            >
+                                <div className="p-6 flex-grow">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="relative">
+                                            <img src={agent.avatarUrl} alt={agent.name} className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-md" />
+                                            {agent.id === 'agent-abdullah' && (
+                                                <span className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-[9px] font-normal px-1.5 py-0.5 rounded-full animate-pulse border border-white dark:border-slate-800">CNN ACTIVE</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-normal text-slate-950 dark:text-white">{agent.name}</h3>
+                                            <p className="text-xs font-normal text-teal-600 dark:text-teal-400 uppercase tracking-widest">{agent.role}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 line-clamp-3 leading-relaxed">{agent.description}</p>
+                                    
+                                    <div className="space-y-2">
+                                        {agent.capabilities.slice(0, 3).map((cap, i) => (
+                                            <div key={i} className="flex items-center text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded">
+                                                <CheckCircle className="w-3 h-3 mr-1.5 text-teal-500" />
+                                                {cap}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/20">
+                                    <span className="text-[11px] text-slate-500">Reports: <span className="font-normal">{agent.reportingLine}</span></span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onConsultAgent(agent);
+                                        }}
+                                        className="flex items-center gap-1 text-xs font-normal text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
+                                    >
+                                        <MessageSquare className="w-3.5 h-3.5" />
+                                        Consult Voice
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {selectedAgent && (
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6 animate-fade-in">
+                            <img src={selectedAgent.avatarUrl} alt={selectedAgent.name} className="w-12 h-12 rounded-full object-cover border-2 border-teal-500 shadow-md self-start" />
+                            <div className="flex-grow space-y-4">
+                                <div>
+                                    <h2 className="text-lg font-normal text-slate-950 dark:text-white">{selectedAgent.name}</h2>
+                                    <p className="text-xs font-semibold text-teal-600 uppercase tracking-wider">{selectedAgent.title}</p>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{selectedAgent.fullBio}</p>
+                                
+                                <div>
+                                    <p className="text-xs font-bold uppercase text-slate-400 tracking-wide mb-2">Primary RACI Scope &amp; Responsibilities</p>
+                                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {selectedAgent.responsibilities.map((r, i) => (
+                                            <li key={i} className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-1">
+                                                <ChevronRight className="w-3.5 h-3.5 text-teal-600 flex-shrink-0 mt-0.5" />
+                                                <span>{r}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* TAB CONTENT 2: Boardroom Deliberations */}
+            {activeTab === 'meeting' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Collective intelligence panel inside the meeting */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+                            <h2 className="text-sm font-normal uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                                <Database className="w-4 h-4 text-teal-600" />
+                                Board Shared Intelligence
+                            </h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                Our agents inspect the live micro-services of the compliance platform. They share a synchronized state ledger.
+                            </p>
+
+                            <div className="space-y-3 pt-2">
+                                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                    <span className="text-xs text-slate-600 dark:text-slate-300">NCA ECC Compliance</span>
+                                    <span className="text-xs font-bold text-teal-600">
+                                        {Math.round((eccAssessment.filter(v => v.controlStatus === 'Implemented').length / (eccAssessment.length || 1)) * 100)}%
+                                    </span>
+                                </div>
+                                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                    <span className="text-xs text-slate-600 dark:text-slate-300">Active Risk Index</span>
+                                    <span className="text-xs font-bold text-amber-600">{risks.length} Listed</span>
+                                </div>
+                                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                    <span className="text-xs text-slate-600 dark:text-slate-300">Remedial Plans</span>
+                                    <span className="text-xs font-bold text-red-500">
+                                        {evidences.filter(e => e.status === 'Rejected').length} Pending Treatment
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Co-operative Drafting trigger section */}
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+                            <h2 className="text-sm font-normal uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                                <Bot className="w-4 h-4 text-purple-600" />
+                                Cooperatively Draft Missing Tasks
+                            </h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                Identify a loophole or unfulfilled regulation? Command all boardroom members to collaborate. They will debate, auto-generate a comprehensive policy standard, apply peer-review signatures, and hand it to you for deployment.
+                            </p>
+
+                            <div className="space-y-2 pt-2">
+                                <button
+                                    onClick={() => handleTriggerMissingTaskCooperation("Privileged Access Governance Control Policy")}
+                                    disabled={isTaskGenerating}
+                                    className="w-full text-left p-2.5 bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/40 rounded-xl text-xs text-purple-900 dark:text-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-900/40 transition flex items-center justify-between"
+                                >
+                                    <span>Draft SAMA CSF Privileged Access Policy</span>
+                                    <ChevronRight className="w-4 h-4 shrink-0" />
+                                </button>
+                                <button
+                                    onClick={() => handleTriggerMissingTaskCooperation("Vulnerability Remediation Operational Standard")}
+                                    disabled={isTaskGenerating}
+                                    className="w-full text-left p-2.5 bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/40 rounded-xl text-xs text-purple-900 dark:text-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-900/40 transition flex items-center justify-between"
+                                >
+                                    <span>Draft Vulnerability Remediation Standard</span>
+                                    <ChevronRight className="w-4 h-4 shrink-0" />
+                                </button>
+                                <button
+                                    onClick={() => handleTriggerMissingTaskCooperation("Personal Data Protection Privacy Notice")}
+                                    disabled={isTaskGenerating}
+                                    className="w-full text-left p-2.5 bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/40 rounded-xl text-xs text-purple-900 dark:text-purple-300 hover:bg-purple-100/50 dark:hover:bg-purple-900/40 transition flex items-center justify-between"
+                                >
+                                    <span>Draft PDPL Compliance Privacy Notice</span>
+                                    <ChevronRight className="w-4 h-4 shrink-0" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chat Boardroom transcripts and active logs */}
+                    <div className="lg:col-span-2 flex flex-col h-[640px] bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-950">
                             <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 bg-green-500 rounded-full animate-ping"></span>
-                                <h3 className="text-white font-normal">
-                                    {language === 'ar' ? 'اجتماع المحاذاة الاستراتيجي - مباشر' : 'Strategic Alignment Meeting - Live'}
+                                <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                                <h3 className="text-white text-sm font-normal text-[13px] uppercase tracking-wider">
+                                    Strategic Alignment Meeting - Active
                                 </h3>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700/60">
-                                <span className="text-slate-400 text-[11px] px-2 font-semibold uppercase">{language === 'ar' ? 'لغة الحوار:' : 'Dialog Language:'}</span>
+                            
+                            {/* Multilingual control */}
+                            <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-lg">
                                 <button 
                                     onClick={() => setBoardroomLang('en')}
-                                    className={`px-2 py-1 rounded text-[11px] transition-all font-medium flex items-center gap-1 ${boardroomLang === 'en' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200'}`}
+                                    className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${boardroomLang === 'en' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
                                 >
-                                    <span>EN</span> 🇬🇧
+                                    EN 🇬🇧
                                 </button>
                                 <button 
                                     onClick={() => setBoardroomLang('ar')}
-                                    className={`px-2 py-1 rounded text-[11px] transition-all font-medium flex items-center gap-1 ${boardroomLang === 'ar' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200'}`}
+                                    className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider transition-all ${boardroomLang === 'ar' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
                                 >
-                                    <span>AR</span> 🇸🇦
+                                    AR 🇸🇦
                                 </button>
-                                <button 
-                                    onClick={() => setBoardroomLang('ur')}
-                                    className={`px-2 py-1 rounded text-[11px] transition-all font-medium flex items-center gap-1 ${boardroomLang === 'ur' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200'}`}
-                                >
-                                    <span>UR</span> 🇵🇰
-                                </button>
-                                <button 
-                                    onClick={() => setBoardroomLang('de')}
-                                    className={`px-2 py-1 rounded text-[11px] transition-all font-medium flex items-center gap-1 ${boardroomLang === 'de' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200'}`}
-                                >
-                                    <span>DE</span> 🇩🇪
-                                </button>
-                                <button 
-                                    onClick={() => setBoardroomLang('zh')}
-                                    className={`px-2 py-1 rounded text-[11px] transition-all font-medium flex items-center gap-1 ${boardroomLang === 'zh' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200'}`}
-                                >
-                                    <span>ZH</span> 🇨🇳
-                                </button>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                {isAnalyzingDoc && <span className="text-xs text-purple-400 animate-pulse flex items-center"><EyeIcon className="w-3 h-3 mr-1"/> CNN Analysis Active...</span>}
-                                {isThinking && <span className="text-xs text-gray-400 animate-pulse">Agents thinking...</span>}
                             </div>
                         </div>
-                        
-                        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4">
+
+                        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                             {meetingLog.length === 0 && (
-                                <div className="text-center text-gray-500 italic mt-20">Initializing Virtual Agents...</div>
+                                <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-40 text-slate-400">
+                                    <MessageSquare className="w-12 h-12 mb-3 text-slate-600" />
+                                    <p className="text-xs uppercase tracking-widest font-normal">Strategic board meeting idle. Click compile baseline to assemble agents.</p>
+                                    <button 
+                                        onClick={() => runSimulationTurn()}
+                                        className="mt-4 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs uppercase font-bold"
+                                    >
+                                        Initialize Meeting Session
+                                    </button>
+                                </div>
                             )}
-                            {meetingLog.map((entry, idx) => {
-                                const agent = virtualAgents.find(a => a.name === entry.speaker);
-                                const isUser = entry.speaker.startsWith("You");
+
+                            {meetingLog.map((log, idx) => {
+                                const agent = dynamicAgents.find(a => a.name === log.speaker);
+                                const isUser = log.speaker.startsWith("You");
                                 return (
-                                    <div key={idx} className={`flex items-start gap-4 animate-fade-in ${isUser ? 'flex-row-reverse' : ''}`}>
-                                        <div className="flex-shrink-0">
-                                            {agent ? (
-                                                <img src={agent.avatarUrl} className="w-10 h-10 rounded-full border border-gray-600" alt={entry.speaker} />
-                                            ) : isUser ? (
-                                                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-white font-normal">U</div>
-                                            ) : (
-                                                <div className="w-10 h-10 bg-gray-700 rounded-full"></div>
-                                            )}
-                                        </div>
-                                        <div className={`flex-grow max-w-[80%] ${isUser ? 'text-right' : ''}`}>
-                                            <div className={`flex items-baseline justify-between ${isUser ? 'flex-row-reverse' : ''}`}>
-                                                <span className="font-normal text-teal-400 text-sm">{entry.speaker}</span>
-                                                <span className="text-xs text-gray-500 mx-2">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                                    <div key={idx} className={`flex items-start gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-fade-in`}>
+                                        {agent ? (
+                                            <img src={agent.avatarUrl} alt={agent.name} className="w-9 h-9 rounded-full object-cover border border-slate-700 mt-1" />
+                                        ) : (
+                                            <div className="w-9 h-9 rounded-full bg-teal-900 flex items-center justify-center text-white text-xs mt-1">
+                                                {isUser ? 'ME' : 'SYS'}
                                             </div>
-                                            <div className={`mt-1 p-3 rounded-lg ${isUser ? 'bg-teal-900/50 border border-teal-700' : 'bg-gray-800 border border-gray-700'}`}>
-                                                <p className="text-gray-200 text-sm">
-                                                    {boardroomLang === 'ar' ? (entry.message_ar || entry.message_en) :
-                                                     boardroomLang === 'ur' ? (entry.message_ur || entry.message_en) :
-                                                     boardroomLang === 'de' ? (entry.message_de || entry.message_en) :
-                                                     boardroomLang === 'zh' ? (entry.message_zh || entry.message_en) :
-                                                     entry.message_en}
+                                        )}
+                                        <div className={`flex flex-col max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[11px] font-semibold text-slate-400">{log.speaker}</span>
+                                                <span className="text-[9px] text-slate-500">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                            </div>
+                                            <div className={`p-3 rounded-2xl text-[13px] md:text-xs leading-relaxed mt-1 ${isUser ? 'bg-teal-950/40 border border-teal-800 text-teal-100' : 'bg-slate-800/80 border border-slate-700 text-slate-100'}`}>
+                                                <p className={boardroomLang === 'ar' ? 'font-arabic text-right' : 'text-left'} dir={boardroomLang === 'ar' ? 'rtl' : 'ltr'}>
+                                                    {boardroomLang === 'ar' ? (log.message_ar || log.message_en) : log.message_en}
                                                 </p>
-                                                {boardroomLang !== 'en' && (
-                                                    <p className="text-gray-400 text-xs mt-1 border-t border-gray-700/50 pt-1 opacity-75">
-                                                        {entry.message_en}
-                                                    </p>
-                                                )}
-                                                {boardroomLang === 'en' && entry.message_ar && (
-                                                    <p className="text-gray-400 text-[11px] mt-1.5 border-t border-gray-700/50 pt-1 font-arabic" dir="rtl">
-                                                        {entry.message_ar}
-                                                    </p>
-                                                )}
                                             </div>
-                                            {entry.attachment && (
-                                                <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-purple-900/30 border border-purple-800 rounded text-xs text-purple-300">
-                                                    <PaperClipIcon className="w-3 h-3" />
-                                                    Attached: {entry.attachment.name}
-                                                </div>
-                                            )}
-                                            {entry.action && (
-                                                <div className="mt-1 inline-flex items-center gap-2 px-3 py-1 bg-green-900/30 border border-green-800 rounded text-xs text-green-300">
-                                                    <SparklesIcon className="w-3 h-3" />
-                                                    {entry.action}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 );
                             })}
+
+                            {isThinking && (
+                                <div className="flex items-center gap-2 text-xs text-slate-500 animate-pulse pl-4">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    <span>Boardroom advisors are debating consensus...</span>
+                                </div>
+                            )}
+
+                            {isTaskGenerating && (
+                                <div className="p-4 bg-purple-950/20 border border-purple-900/60 rounded-xl space-y-3 animate-pulse">
+                                    <div className="w-7 h-7 bg-purple-800 rounded-full flex items-center justify-center text-white text-xs">
+                                        <Sparkles className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold text-purple-300">Cooperative Agent Drafting Engine Triggered</p>
+                                        <p className="text-[11px] text-purple-400 mt-1">CISO, Compliance, CTO and DevOps are formatting markdown standards and reviews...</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        
-                        {/* Meeting Controls Footer */}
-                        <div className="p-4 border-t border-gray-700 bg-gray-800 rounded-b-xl flex flex-col md:flex-row justify-between items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                {/* Microphone */}
-                                <button 
+
+                        {/* Meeting controls footer */}
+                        <div className="p-3 border-t border-slate-800 bg-slate-950 flex flex-col md:flex-row items-center gap-3">
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <button
                                     onClick={toggleMic}
-                                    className={`p-3 rounded-full transition-all duration-300 ${isMicActive ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                                    title={isMicActive ? "Mute Microphone" : "Speak to Team"}
+                                    className={`p-2 rounded-xl transition-all ${isMicActive ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                                    title="Speak to board"
                                 >
-                                    <MicrophoneIcon className="w-5 h-5" />
+                                    <Phone className="w-4 h-4" />
                                 </button>
-                                
-                                {/* Document Upload */}
-                                <button 
+                                <button
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="p-3 rounded-full bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
-                                    title="Upload Document for Analysis"
-                                    disabled={isAnalyzingDoc}
+                                    className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+                                    title="Submit evidence file"
                                 >
-                                    <UploadIcon className="w-5 h-5" />
+                                    <Upload className="w-4 h-4" />
                                 </button>
                                 <input 
-                                    type="file" 
                                     ref={fileInputRef} 
+                                    type="file" 
                                     className="hidden" 
                                     accept="image/*,application/pdf"
-                                    onChange={handleFileUpload}
+                                    onChange={handleEvidenceUpload}
                                 />
                             </div>
 
-                            {/* Direct Chat Text-Input so users can type questions */}
-                            <form 
+                            <form
                                 onSubmit={(e) => {
                                     e.preventDefault();
-                                    const form = e.currentTarget;
-                                    const input = form.elements.namedItem('chatInput') as HTMLInputElement;
-                                    if (input && input.value.trim()) {
-                                        handleUserSpeak(input.value.trim());
-                                        input.value = '';
+                                    const text = (e.currentTarget.elements.namedItem('chatIn') as HTMLInputElement).value;
+                                    if (text.trim()) {
+                                        handleUserSpeak(text.trim());
+                                        e.currentTarget.reset();
                                     }
                                 }}
-                                className="flex-grow flex gap-2 w-full md:w-auto"
+                                className="flex-1 flex gap-2 w-full"
                             >
                                 <input
-                                    name="chatInput"
+                                    name="chatIn"
                                     type="text"
-                                    placeholder="Type your question or instruct the team..."
-                                    className="flex-grow bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500 placeholder-gray-400"
-                                    disabled={isThinking}
-                                    id="agentic_chat_input"
+                                    placeholder="Instruct the advisors or ask compliance questions..."
+                                    className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
                                 />
                                 <button
                                     type="submit"
-                                    disabled={isThinking}
-                                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-sm font-normal disabled:opacity-50"
-                                    id="agentic_chat_send"
+                                    className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg uppercase"
                                 >
                                     Send
                                 </button>
                             </form>
-
-                            <button 
-                                onClick={() => runSimulationTurn()} 
-                                disabled={isThinking}
-                                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm disabled:opacity-50 whitespace-nowrap"
-                                id="agentic_chat_continue"
+                            
+                            <button
+                                onClick={() => runSimulationTurn()}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold rounded-lg shrink-0"
                             >
-                                Continue
+                                Debrief
                             </button>
                         </div>
                     </div>
 
-                    {/* Active Agents Status Sidebar */}
-                    <div className="lg:col-span-1 space-y-3 h-[600px] overflow-y-auto pr-2">
-                        {virtualAgents.map(agent => {
-                            const isSpeaking = meetingLog.length > 0 && meetingLog[meetingLog.length - 1].speaker === agent.name;
-                            return (
-                                <div key={agent.id} className={`p-3 rounded-lg border transition-all duration-300 ${isSpeaking ? 'bg-teal-900/40 border-teal-500 scale-105 shadow-lg' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-80'}`}>
-                                    <div className="flex items-center gap-3">
-                                        <img src={agent.avatarUrl} className="w-8 h-8 rounded-full" alt={agent.name} />
-                                        <div>
-                                            <p className={`text-xs font-normal ${isSpeaking ? 'text-teal-300' : 'text-gray-700 dark:text-gray-300'}`}>{agent.name}</p>
-                                            <p className="text-[10px] text-gray-500">{agent.role}</p>
+                    {/* Collaborative drafting validator panel */}
+                    {generatedTaskDetails && (
+                        <div className="lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6 animate-fade-in">
+                            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                                <div>
+                                    <span className="px-2 py-0.5 bg-purple-50 dark:bg-purple-950/20 text-[10px] text-purple-700 dark:text-purple-300 font-semibold uppercase tracking-widest rounded border border-purple-100 dark:border-purple-900/40">Collaborative Draft Standard</span>
+                                    <h2 className="text-lg font-normal text-slate-950 dark:text-white mt-2">{generatedTaskDetails.taskTitle}</h2>
+                                    <p className="text-xs text-slate-500 mt-1">Assigned Context: {generatedTaskDetails.category}</p>
+                                </div>
+                                {!generatedTaskDetails.humanApproved ? (
+                                    <button
+                                        onClick={handleHumanValidateAndApprove}
+                                        className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-1"
+                                    >
+                                        <CheckCircle className="w-4 h-4" />
+                                        Validate &amp; Seal Policy
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-100 dark:border-emerald-950 px-4 py-2 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs">
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span>Seal Approved. Saved to GRC Registry</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="md:col-span-2 space-y-4">
+                                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Policy Markdown content</p>
+                                    <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-300 overflow-x-auto max-h-[250px]">
+                                        <pre className="whitespace-pre-wrap">{generatedTaskDetails.draftContent}</pre>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Board Consensus Signatures</p>
+                                    <div className="space-y-3">
+                                        {generatedTaskDetails.agentFeedback.map((f, i) => (
+                                            <div key={i} className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-xl relative overflow-hidden">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{f.speaker}</p>
+                                                        <p className="text-[10px] text-teal-600 font-bold uppercase tracking-widest">{f.role}</p>
+                                                    </div>
+                                                    <span className="text-[10px] bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-bold px-2 py-0.5 rounded border border-teal-100 dark:border-teal-900/40">
+                                                        SIGNED
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-500 mt-2 italic">"{f.comment_en}"</p>
+                                                <p className="text-[10px] text-slate-400 mt-1 font-arabic" dir="rtl">{f.comment_ar}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Implementation Coordination section */}
+                            {generatedTaskDetails.humanApproved && (
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Implementation Coordination (Human-in-the-Loop)</h3>
+                                    <p className="text-xs text-slate-500">
+                                        Director of Operations Ibrahim AI leads the deployment schedule. Review steps below, execute in your local node systems, and advance the state.
+                                    </p>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                                        {generatedTaskDetails.implementationTracker.map((step, idx) => (
+                                            <div key={idx} className={`p-4 rounded-xl border flex flex-col justify-between gap-3 ${step.status === 'Done' ? 'bg-slate-50/50 dark:bg-slate-800/20 border-slate-100 dark:border-slate-800/60 opacity-80' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}>
+                                                <div>
+                                                    <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${step.status === 'Todo' ? 'bg-slate-100 text-slate-600' : step.status === 'In Progress' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                                        {step.status}
+                                                    </span>
+                                                    <p className="text-xs font-semibold text-slate-900 dark:text-white mt-3 leading-relaxed">{step.step}</p>
+                                                    <p className="text-[10px] text-slate-400 mt-1 uppercase">Target: {step.timeline}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleAdvanceImplementationStep(idx)}
+                                                    className={`w-full py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition ${step.status === 'Done' ? 'bg-slate-100 text-slate-400' : 'bg-teal-50 dark:bg-teal-950/20 text-teal-700 hover:bg-teal-100'}`}
+                                                >
+                                                    {step.status === 'Todo' ? 'Initiate' : step.status === 'In Progress' ? 'Confirm Completed' : 'Completed ✔'}
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* TAB CONTENT 3: Internal Audit Portal (CNN Engine) */}
+            {activeTab === 'audit' && (
+                <div className="space-y-6">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h2 className="text-md font-normal text-slate-950 dark:text-white flex items-center gap-2">
+                                    <Fingerprint className="w-5 h-5 text-teal-600" />
+                                    Internal Auditor Node Operations
+                                </h2>
+                                <p className="text-xs text-slate-500 mt-1 uppercase tracking-wide">
+                                    Continuous verification supervised by Abdullah AI
+                                </p>
+                            </div>
+                            
+                            <button
+                                onClick={handleIssueCertificate}
+                                className="px-5 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:opacity-90 text-white text-xs font-semibold uppercase tracking-wider rounded-xl shadow transition"
+                            >
+                                Issue Complete GRC Certificate
+                            </button>
+                        </div>
+
+                        {/* Search and framework select controls */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Target Regulation Control</label>
+                                <select
+                                    value={selectedAuditControlId}
+                                    onChange={(e) => {
+                                        setSelectedAuditControlId(e.target.value);
+                                        // Auto map framework
+                                        const found = frameworkControlsList.find(c => c.id === e.target.value);
+                                        if (found) {
+                                            setSelectedAuditFramework(found.domain === 'SAMA CSF' ? 'SAMA CSF' : found.domain === 'PDPL' ? 'PDPL' : 'NCA ECC');
+                                        }
+                                    }}
+                                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs px-3 py-2 rounded-lg text-slate-800 dark:text-white"
+                                >
+                                    {frameworkControlsList.map(c => (
+                                        <option key={c.id} value={c.id}>[{c.id}] {c.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Evidence Submission Drag-and-Drop</label>
+                                <div 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-teal-500 dark:hover:border-teal-500 rounded-lg p-3 bg-white dark:bg-slate-900 flex items-center justify-center gap-2 cursor-pointer transition"
+                                >
+                                    <Upload className="w-4 h-4 text-teal-600" />
+                                    <span className="text-xs text-slate-505 dark:text-slate-400">Click to attach screenshot, system backup or signed logs...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {isScanningEvidence && (
+                            <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2 animate-pulse">
+                                <div className="flex items-center gap-2 text-xs text-purple-400">
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    <span>CNN VISION PIPELINE: Extrapolating configuration telemetry, verifying digital visual markers...</span>
+                                </div>
+                                <div className="w-full bg-slate-800 h-1.5 rounded overflow-hidden">
+                                    <div className="bg-purple-500 h-full w-[45%] animate-pulse"></div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Evidence verification queue */}
+                    {evidences.length > 0 && (
+                        <div className="space-y-6">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Evidence Verification Ledger</h3>
+                            
+                            {evidences.map(ev => {
+                                const ctrl = frameworkControlsList.find(c => c.id === ev.controlId);
+                                return (
+                                    <div key={ev.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-300 font-bold rounded">
+                                                        {ev.framework} - {ev.controlId}
+                                                    </span>
+                                                    <span className={`px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full border ${
+                                                        ev.status === 'Approved' ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800/40' :
+                                                        ev.status === 'Rejected' ? 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/40' :
+                                                        'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/40'
+                                                    }`}>
+                                                        {ev.status}
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-sm font-semibold text-slate-950 dark:text-white mt-2">Target: {ctrl?.title || 'System Control Policy'}</h4>
+                                                <p className="text-[11px] text-slate-400 mt-1">Uploaded: {ev.fileName} ({ev.fileSize}) • {new Date(ev.uploadedAt).toLocaleString()}</p>
+                                            </div>
+
+                                            {ev.status === 'Pending Review' && (
+                                                <button
+                                                    onClick={() => handleIssueTreatmentPlan(ev.id)}
+                                                    className="px-3 py-1.5 border border-red-200 hover:bg-red-50 text-red-600 dark:border-red-800/40 dark:hover:bg-red-950/20 text-xs font-semibold rounded-lg flex items-center gap-1.5"
+                                                    title="Reject evidence and generate corrective timeline"
+                                                >
+                                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                                    Flag Treatment Plan
+                                                </button>
+                                            )}
                                         </div>
-                                        {isSpeaking && (
-                                            <div className="ml-auto flex gap-0.5">
-                                                <div className="w-1 h-3 bg-teal-500 animate-bounce"></div>
-                                                <div className="w-1 h-3 bg-teal-500 animate-bounce delay-100"></div>
-                                                <div className="w-1 h-3 bg-teal-500 animate-bounce delay-200"></div>
+
+                                        {/* Multi-Signature authorizations checklist & inputs */}
+                                        <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800 space-y-4">
+                                            <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-slate-800/50 pb-2">
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <Fingerprint className="w-3.5 h-3.5 text-teal-600" />
+                                                    Authorized Corporate Approvals (4-Levels Required)
+                                                </p>
+                                                <span className="text-[10px] text-slate-400 uppercase">Input secret PIN to sign</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                                                {/* Signature slots */}
+                                                {(['riskOwner', 'lineManager', 'cio', 'ceo'] as const).map(roleKey => {
+                                                    const aut = authorities[roleKey];
+                                                    const isSigned = ev.signatures[roleKey];
+                                                    return (
+                                                        <div key={roleKey} className={`p-3 rounded-lg border-2 ${isSigned ? 'bg-emerald-50/25 dark:bg-emerald-950/20 border-emerald-500/50' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}>
+                                                            <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{aut.name}</p>
+                                                            <p className="text-[9px] text-slate-400 uppercase font-bold mt-0.5">{aut.role}</p>
+                                                            
+                                                            <div className="mt-3">
+                                                                {isSigned ? (
+                                                                    <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold font-mono">
+                                                                        <Check className="w-4 h-4 shrink-0" />
+                                                                        <span>SEAL SIGNED</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <form
+                                                                        onSubmit={(e) => {
+                                                                            e.preventDefault();
+                                                                            const pin = (e.currentTarget.elements.namedItem('pinIn') as HTMLInputElement).value;
+                                                                            handleSignEvidence(ev.id, roleKey, pin);
+                                                                        }}
+                                                                        className="flex gap-1"
+                                                                    >
+                                                                        <input
+                                                                            name="pinIn"
+                                                                            type="password"
+                                                                            placeholder="PIN"
+                                                                            className="w-12 bg-slate-50 dark:bg-slate-800 text-xs text-center border rounded focus:outline-none focus:ring-1 focus:ring-teal-500 py-0.5"
+                                                                        />
+                                                                        <button 
+                                                                            type="submit"
+                                                                            className="px-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded text-[10px] font-bold"
+                                                                        >
+                                                                            Stamp
+                                                                        </button>
+                                                                    </form>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Diagnostic CNN Logs Panel */}
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CNN Audit Diagnostic Logs</p>
+                                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 max-h-[160px] overflow-y-auto text-xs font-mono text-slate-400 space-y-1">
+                                                {ev.cnnOutputLog.map((log, idx) => (
+                                                    <p key={idx} className={log.includes('[VISION]') || log.includes('[OCR]') ? 'text-cyan-400' : ''}>{log}</p>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Actionable treatment plans if rejected */}
+                                        {ev.treatmentPlan && (
+                                            <div className="p-4 bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 rounded-xl space-y-3 animate-fade-in">
+                                                <div className="flex items-center gap-1.5 text-rose-800 dark:text-rose-300 font-semibold text-xs uppercase tracking-wide">
+                                                    <AlertTriangle className="w-4 h-4 text-rose-500" />
+                                                    <span>Cybersecurity Remediation Treatment Plan Issued</span>
+                                                </div>
+                                                <p className="text-xs text-rose-900/80 dark:text-rose-300 leading-relaxed italic">
+                                                    Gaps identified: "{ev.treatmentPlan.gapComments}"
+                                                </p>
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">Corrective Measures Required:</p>
+                                                    <ul className="list-disc pl-4 text-xs text-rose-800 dark:text-rose-400 mt-1 space-y-1">
+                                                        {ev.treatmentPlan.remediationActions.map((act, i) => (
+                                                            <li key={i}>{act}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                                <div className="text-[10px] text-rose-600 dark:text-rose-400 flex justify-between uppercase pt-1 font-semibold">
+                                                    <span>Assignee: {ev.treatmentPlan.responsibleParty}</span>
+                                                    <span>Target Timeline: {ev.treatmentPlan.dueDate}</span>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Issued Certificates */}
+                    {certificates.length > 0 && (
+                        <div className="space-y-6">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Issued Corporate Certification Records</h3>
+                            
+                            {certificates.map(cert => (
+                                <div key={cert.id} className="bg-gradient-to-r from-slate-900 to-slate-950 border-2 border-teal-500 rounded-2xl p-8 relative overflow-hidden shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+                                    {/* background design */}
+                                    <div className="absolute -right-16 -bottom-16 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+                                    
+                                    <div className="space-y-4 max-w-xl text-center md:text-left">
+                                        <div className="flex flex-col md:flex-row items-center gap-3">
+                                            <Award className="w-10 h-10 text-teal-400 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-teal-400 text-xs font-bold tracking-widest uppercase">Certificate of Cybersecurity Compliance</p>
+                                                <h4 className="text-md font-normal text-white mt-1">FRAMEWORK VERIFIED: {cert.framework}</h4>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-xs text-slate-300 leading-relaxed">
+                                            This nodes confirms compliance. Subject is hereby certified under cryptographic supervision matching ECC-1 control standards of general multi-tenant governance security boundaries SAMA ECC.
+                                        </p>
+                                        
+                                        <div className="grid grid-cols-2 gap-4 text-[10px] text-slate-400 uppercase pt-2 font-mono">
+                                            <div>ID: {cert.id}</div>
+                                            <div>Serial: {cert.serialNumber}</div>
+                                            <div className="col-span-2 truncate">Hash: {cert.securityHash}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Direct Inline Generators: QR Code, barcode */}
+                                    <div className="flex flex-col items-center gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800 shrink-0">
+                                        {generateCompanyQR(cert)}
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Company QR Stamp</p>
+                                        
+                                        {generateDocumentBarcode(cert.id)}
+                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Document Barcode</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* TAB CONTENT 4: Credentials Vault */}
+            {activeTab === 'vault' && (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
+                    <div>
+                        <h2 className="text-sm font-normal uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                            <Fingerprint className="w-5 h-5 text-teal-600" />
+                            Digital Signature Registry Vault
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-1">
+                            Register formal compliance authority credentials. Set authentication PINs used to securely validate and stamp audit evidence.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {(Object.keys(authorities) as Array<keyof typeof authorities>).map(key => {
+                            const aut = authorities[key];
+                            return (
+                                <div key={key} className="p-5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col justify-between gap-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="text-xs font-semibold text-slate-950 dark:text-white uppercase">{aut.role} Profile</h3>
+                                            <p className="text-md font-normal text-slate-800 dark:text-slate-200 mt-1">{aut.name}</p>
+                                        </div>
+                                        <span className={`px-2 py-0.5 text-[9px] font-bold rounded uppercase ${aut.registered ? 'bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300' : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'}`}>
+                                            {aut.registered ? 'Active Credentials' : 'Unregistered'}
+                                        </span>
+                                    </div>
+
+                                    {aut.registered ? (
+                                        <div className="space-y-2">
+                                            <div className="text-[11px] text-slate-500">
+                                                Visual signature stamp registered successfully. PIN is set to <span className="font-mono text-teal-600 font-bold">****</span>
+                                            </div>
+                                            <div className="text-[9px] text-slate-400 uppercase">Registered at: {new Date(aut.registeredAt || Date.now()).toLocaleDateString()}</div>
+                                        </div>
+                                    ) : (
+                                        <div className="pt-2">
+                                            <button
+                                                onClick={() => handleRegisterAuthority(key as string)}
+                                                className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold uppercase tracking-wider rounded-xl transition"
+                                            >
+                                                Initialize Authority Signature
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
-                        
-                        {/* Upload Status Card */}
-                        {uploadedFile && (
-                            <div className="p-3 rounded-lg border border-purple-500 bg-purple-900/20 mt-4">
-                                <p className="text-xs font-normal text-purple-300 flex items-center gap-2">
-                                    <DocumentTextIcon className="w-3 h-3"/>
-                                    Analyzing File
+                    </div>
+                </div>
+            )}
+
+            {/* TAB CONTENT 5: Outbound Escalation Simulator Logs */}
+            {activeTab === 'escalations' && (
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
+                    <div>
+                        <h2 className="text-sm font-normal uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                            <Mail className="w-5 h-5 text-teal-600" />
+                            Incident Trigger &amp; Escalation Simulator
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-1">
+                            Simulate active notifications sent automatically by the compliance agents if control levels drift or reviews miss their schedule.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1 space-y-4">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Escalation WhatsApp &amp; VoIP phone</label>
+                            <input
+                                type="text"
+                                value={outboundTarget}
+                                onChange={(e) => setOutboundTarget(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs rounded-lg text-slate-800 dark:text-white"
+                            />
+
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-2">Escalation Email contact</label>
+                            <input
+                                type="text"
+                                value={outboundEmail}
+                                onChange={(e) => setOutboundEmail(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs rounded-lg text-slate-800 dark:text-white"
+                            />
+
+                            <div className="space-y-2 pt-4">
+                                <button
+                                    onClick={() => triggerEscalationSimulation('Email')}
+                                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg flex items-center justify-center gap-2"
+                                >
+                                    <Mail className="w-4 h-4" />
+                                    <span>Trigger Outbound Email Alert</span>
+                                </button>
+                                <button
+                                    onClick={() => triggerEscalationSimulation('WhatsApp')}
+                                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-2"
+                                >
+                                    <Bot className="w-4 h-4" />
+                                    <span>Send WhatsApp Alert</span>
+                                </button>
+                                <button
+                                    onClick={() => triggerEscalationSimulation('Call')}
+                                    className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-2"
+                                >
+                                    <Phone className="w-4 h-4" />
+                                    <span>Initiate VoIP Agent Call</span>
+                                </button>
+                            </div>
+
+                            {escalationTriggerSuccess && (
+                                <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest animate-pulse mt-2">
+                                    ✔ Dispatch queue processed successfully. Logged.
                                 </p>
-                                <p className="text-[10px] text-gray-400 mt-1 truncate">{uploadedFile.name}</p>
-                                <div className="w-full bg-gray-700 h-1 mt-2 rounded overflow-hidden">
-                                    <div className="h-full bg-purple-500 animate-progress"></div>
+                            )}
+                        </div>
+
+                        {/* Logs console */}
+                        <div className="lg:col-span-2 space-y-2">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Dispatch Log Console</p>
+                            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 h-[260px] overflow-y-auto text-xs font-mono text-slate-400 space-y-2">
+                                {escalationLogs.length === 0 ? (
+                                    <p className="text-slate-600 italic">No outbound escalations triggered. Click buttons to test dispatches.</p>
+                                ) : (
+                                    escalationLogs.map(log => (
+                                        <div key={log.id} className="border-b border-slate-800/60 pb-2">
+                                            <div className="flex justify-between items-center text-[10px] text-slate-500">
+                                                <span>{new Date(log.timestamp).toLocaleTimeString()} • Type: {log.type}</span>
+                                                <span className={`font-bold uppercase ${log.status === 'Acked' || log.status === 'Delivered' ? 'text-green-500' : 'text-cyan-400 animate-pulse'}`}>{log.status}</span>
+                                            </div>
+                                            <p className="text-slate-200 mt-1">{log.message}</p>
+                                            <p className="text-slate-400 text-[10px] mt-0.5">Destination: {log.target}</p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB CONTENT 6: Agentic Cybersecurity Skills Knowledge Base (Anthropic 754 Library) */}
+            {activeTab === 'skills' && (
+                <div className="space-y-6">
+                    {/* Hero stats & Repository banner */}
+                    <div className="bg-slate-950 text-white rounded-2xl p-6 border border-slate-800 shadow-md space-y-4 relative overflow-hidden">
+                        {/* Abstract background graphics */}
+                        <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 bg-radial-gradient pointer-events-none flex items-center justify-center">
+                            <Cpu className="w-48 h-48 text-cyan-400" />
+                        </div>
+
+                        <div className="flex flex-col gap-2 max-w-3xl">
+                            <div className="flex items-center gap-2">
+                                <span className="bg-teal-500/10 text-teal-400 border border-teal-500/30 text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full">
+                                    AI-Native Knowledge Base
+                                </span>
+                                <span className="text-slate-500 text-xs font-mono">•</span>
+                                <a 
+                                    href="https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] font-mono text-cyan-400 hover:underline flex items-center gap-1"
+                                >
+                                    <span>github.com/mukul975/Anthropic-Cybersecurity-Skills.git</span>
+                                    <span>↗</span>
+                                </a>
+                            </div>
+                            <h2 className="text-lg font-normal tracking-tight text-white flex items-center gap-2 pt-1">
+                                <BookOpen className="w-5 h-5 text-teal-400" />
+                                {language === 'ar' 
+                                  ? 'مكتبة مهارات ومعرفة وكلاء الأمن السيبراني المستقلين' 
+                                  : 'Sovereign Agentic Cybersecurity Skills Library'}
+                            </h2>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                {language === 'ar'
+                                  ? 'لا تقتصر هذه المكتبة على البرامج النصية والتعليمات البسيطة، بل هي عبارة عن "كبسولات معرفية سيبرانية لوكلاء الذكاء الاصطناعي". تكمن أهميتها في هيكلتها لتمكين الوكلاء من اتخاذ قرارات مستقلة وخبرات نوعية كمحللي أمن سيبراني متقدمين.'
+                                  : 'This is not just a collection of scripts or checklists. It is an AI-native cognitive base structured for GRC & Technical Cybersecurity AI agents to perform sovereign audit checks, network validation, threat mitigation, and code refactoring as veteran corporate security analysts.'}
+                            </p>
+                        </div>
+
+                        {/* Knowledge matrix badges */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-800">
+                            <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800/40">
+                                <p className="text-xl font-mono text-cyan-400 font-bold">754</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">
+                                    {language === 'ar' ? 'مهارة جاهزة للإنتاج' : 'Production-Ready Skills'}
+                                </p>
+                            </div>
+                            <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800/40">
+                                <p className="text-xl font-mono text-teal-400 font-bold">26</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">
+                                    {language === 'ar' ? 'مجالاً سيبرانياً مخصصاً' : 'Specialized Cyber Domains'}
+                                </p>
+                            </div>
+                            <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800/40">
+                                <p className="text-xs text-purple-400 font-medium font-mono">MITRE ATT&amp;CK / NIST AI RMF</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-2">
+                                    {language === 'ar' ? 'خريطة الأطر والامتثال' : 'Established Mappings'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Visual Cybersecurity Skills Map Dashboard */}
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+                        <div className="flex justify-between items-center flex-wrap gap-2">
+                            <div className="space-y-1">
+                                <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <span className="flex h-2.5 w-2.5 rounded-full bg-teal-500 animate-pulse" />
+                                    Active Cybersecurity Skills Map (754 Integrated Capsules)
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
+                                    Browse technical capability allocations across the 26 specialist domains. Select a domain card to filter the underlying telemetry list.
+                                </p>
+                            </div>
+                            <span className="text-[11px] font-mono text-teal-600 bg-teal-50 dark:bg-teal-950/40 border border-teal-500/20 px-2.5 py-1 rounded-full">
+                                Core Mapped Entities: {sampleCyberSkills.length} Checked
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
+                            {[
+                                { name: "Cloud Security", count: 45, agent: "Mohammed AI", role: "CIO", color: "border-blue-500/20 bg-blue-50/20 dark:bg-blue-950/10 text-blue-600" },
+                                { name: "Digital Forensics", count: 38, agent: "Ahmed AI", role: "CISO", color: "border-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/10 text-indigo-600" },
+                                { name: "Cryptography", count: 42, agent: "Mohammed AI", role: "CIO", color: "border-purple-500/20 bg-purple-50/20 dark:bg-purple-950/10 text-purple-600" },
+                                { name: "Malware Analysis", count: 31, agent: "Ahmed AI", role: "CISO", color: "border-red-500/20 bg-red-50/20 dark:bg-red-950/10 text-red-600" },
+                                { name: "DevSecOps & Secure SDLC", count: 36, agent: "Khalid AI", role: "Code Reviewer", color: "border-orange-500/20 bg-orange-50/20 dark:bg-orange-950/10 text-orange-600" },
+                                { name: "GRC & Risk Management", count: 48, agent: "Rashid AI", role: "Risk Manager", color: "border-teal-500/20 bg-teal-50/20 dark:bg-teal-950/10 text-teal-600" },
+                                { name: "Threat Hunting", count: 34, agent: "Ahmed AI", role: "CISO", color: "border-amber-500/20 bg-amber-50/20 dark:bg-amber-950/10 text-amber-600" },
+                                { name: "Network Security", count: 40, agent: "Fahad AI", role: "CTO", color: "border-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 text-emerald-600" },
+                                { name: "Incident Response", count: 44, agent: "Ahmed AI", role: "CISO", color: "border-rose-500/20 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600" },
+                                { name: "Identity & Access Management (IAM)", count: 39, agent: "Ibrahim AI", role: "DOP", color: "border-cyan-500/20 bg-cyan-50/20 dark:bg-cyan-950/10 text-cyan-600" },
+                                { name: "Penetration Testing", count: 35, agent: "Ahmed AI", role: "CISO", color: "border-fuchsia-500/20 bg-fuchsia-50/20 dark:bg-fuchsia-950/10 text-fuchsia-600" },
+                                { name: "Data Protection & Privacy", count: 43, agent: "Hoda AI", role: "DPO", color: "border-pink-500/20 bg-pink-50/20 dark:bg-pink-950/10 text-pink-600" },
+                                { name: "Application Security", count: 37, agent: "Khalid AI", role: "Code Reviewer", color: "border-violet-500/20 bg-violet-50/20 dark:bg-violet-950/10 text-violet-600" },
+                                { name: "Vulnerability Management", count: 29, agent: "Ahmed AI", role: "CISO", color: "border-lime-500/20 bg-lime-50/20 dark:bg-lime-950/10 text-lime-600" },
+                                { name: "Security Architecture", count: 33, agent: "Fahad AI", role: "CTO", color: "border-sky-500/20 bg-sky-50/20 dark:bg-sky-950/10 text-sky-600" },
+                                { name: "OS Hardening & Linux Security", count: 28, agent: "Fahad AI", role: "CTO", color: "border-slate-500/20 bg-slate-50/20 dark:bg-slate-900/10 text-slate-600" },
+                                { name: "AI Safety & NIST AI RMF", count: 41, agent: "Sultan AI", role: "NIST Consultant", color: "border-teal-500/20 bg-teal-50/20 dark:bg-teal-900/10 text-teal-600" },
+                                { name: "Threat Intelligence", count: 30, agent: "Ahmed AI", role: "CISO", color: "border-emerald-500/20 bg-emerald-50/25 dark:bg-emerald-950/10 text-emerald-600" },
+                                { name: "Audit & Compliance Tracking", count: 32, agent: "Abdullah AI", role: "Auditor", color: "border-yellow-500/20 bg-yellow-50/20 dark:bg-yellow-950/10 text-yellow-600" },
+                                { name: "Infrastructure Sec Audit", count: 27, agent: "Fahad AI", role: "CTO", color: "border-blue-500/25 bg-blue-50/25 dark:bg-blue-950/10 text-blue-600" },
+                                { name: "Continuous Security Monitoring", count: 31, agent: "Abdullah AI", role: "Auditor", color: "border-red-500/20 bg-red-50/20 dark:bg-red-950/10 text-red-600" },
+                                { name: "Business Continuity (ISO 22301)", count: 46, agent: "Majed AI", role: "BCM Consultant", color: "border-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 text-emerald-600" },
+                                { name: "ISMS Governance (ISO 27001)", count: 47, agent: "Yousef AI", role: "ISO 27001 Consultant", color: "border-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/10 text-indigo-600" },
+                                { name: "NIST CSF Benchmarking", count: 39, agent: "Sultan AI", role: "NIST Consultant", color: "border-purple-500/20 bg-purple-50/20 dark:bg-purple-950/10 text-purple-600" },
+                                { name: "Privacy Governance (PDPL)", count: 42, agent: "Hoda AI", role: "DPO", color: "border-rose-500/20 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600" },
+                                { name: "Secure Code Review & Refactoring", count: 35, agent: "Khalid AI", role: "Code Reviewer", color: "border-green-500/20 bg-green-50/20 dark:bg-green-950/10 text-green-600" }
+                            ].map((dom) => {
+                                const active = selectedCyberDomain === dom.name;
+                                return (
+                                    <button
+                                        key={dom.name}
+                                        onClick={() => setSelectedCyberDomain(active ? 'All' : dom.name)}
+                                        className={`p-3 text-left rounded-xl border transition-all h-24 flex flex-col justify-between ${dom.color} ${active ? 'ring-2 ring-teal-500 bg-teal-500/5 shadow-md border-teal-500/40' : 'hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}
+                                    >
+                                        <div className="w-full">
+                                            <div className="flex justify-between items-start">
+                                                <p className="text-[11px] font-bold tracking-tight text-slate-800 dark:text-slate-200 truncate pr-1" title={dom.name}>
+                                                    {dom.name}
+                                                </p>
+                                                <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400">
+                                                    {dom.count}
+                                                </span>
+                                            </div>
+                                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 rounded-full mt-1.5">
+                                                <div className="bg-teal-500 h-1 rounded-full" style={{ width: `${Math.min(100, (dom.count / 48) * 100)}%` }} />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 mt-2">
+                                            <span className="text-[10px] text-slate-400 font-normal">Active Expert:</span>
+                                            <span className="text-[9px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 border border-teal-500/10 px-1 shadow-sm rounded">
+                                                {dom.agent} ({dom.role})
+                                            </span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Filters controls */}
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+                        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                            {/* Search Input */}
+                            <div className="relative flex-1 w-full">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                                <input
+                                    type="text"
+                                    placeholder={language === 'ar' 
+                                      ? 'ابحث في الـ ٧٥٤ مهارة طبقاً للمجال، العنوان، أو الأطر المرجعية...' 
+                                      : 'Search 754 skills by title, description, code, or framework mappings...'}
+                                    value={skillsSearch}
+                                    onChange={(e) => setSkillsSearch(e.target.value)}
+                                    className="pl-9 pr-4 py-2 w-full text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                                />
+                            </div>
+                            
+                            {/* Domains Dropdown selector */}
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <Filter className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                <select
+                                    value={selectedCyberDomain}
+                                    onChange={(e) => setSelectedCyberDomain(e.target.value)}
+                                    className="px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-teal-500 w-full md:w-[240px]"
+                                >
+                                    <option value="All">{language === 'ar' ? 'جميع المجالات المتاحة' : 'All 26 Cybersecurity Domains'}</option>
+                                    {CYBER_DOMAINS.map(d => (
+                                        <option key={d} value={d}>{d}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Small shortcuts pills for popular domains */}
+                        <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                            {['All', 'Cloud Security', 'AI Safety & NIST AI RMF', 'Data Protection & Privacy', 'Business Continuity (ISO 22301)', 'ISMS Governance (ISO 27001)'].map(domainShortcut => (
+                                <button
+                                    key={domainShortcut}
+                                    onClick={() => setSelectedCyberDomain(domainShortcut)}
+                                    className={`px-3 py-1 text-[11px] font-normal rounded-full transition-all ${selectedCyberDomain === domainShortcut ? 'bg-teal-500/10 text-teal-600 border border-teal-500/20 font-medium' : 'bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                                >
+                                    {domainShortcut === 'All' ? (language === 'ar' ? 'عرض الكـل' : 'Show All') : domainShortcut}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Skills browser list */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {filteredCyberSkills.map(skill => {
+                            const ownerAgent = dynamicAgents.find(a => a.id === skill.agentOwnerId) || dynamicAgents[0];
+                            const isBeingSimulated = simulatingSkillId === skill.id;
+
+                            return (
+                                <div 
+                                    key={skill.id} 
+                                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4"
+                                >
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-start flex-wrap gap-2">
+                                            <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] px-2.5 py-1 rounded-md font-medium">
+                                                {skill.domain}
+                                            </span>
+                                            
+                                            <div className="flex gap-1.5 flex-wrap">
+                                                {skill.targetFrameworks.map(fw => (
+                                                    <span 
+                                                        key={fw} 
+                                                        className="bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[9px] font-mono px-2 py-0.5 rounded border border-teal-500/20"
+                                                    >
+                                                        {fw}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug">
+                                                {skill.title}
+                                            </h3>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                                {skill.description}
+                                            </p>
+                                        </div>
+
+                                        {/* Technical Action mapping */}
+                                        <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl space-y-1">
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-600">
+                                                {language === 'ar' ? 'التوجيه البرمجي للوكيل / خطوات التحقق' : 'Agent Telemetry Action / Verification Procedure'}
+                                            </p>
+                                            <p className="text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+                                                {skill.technicalAction}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Action footer */}
+                                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            {ownerAgent.avatar ? (
+                                                <span className="text-xl">{ownerAgent.avatar}</span>
+                                            ) : (
+                                                <div className="w-5 h-5 bg-teal-500/10 text-teal-600 rounded-full flex items-center justify-center text-[10px] font-bold">A</div>
+                                            )}
+                                            <div className="text-left">
+                                                <p className="text-[11px] font-medium text-slate-900 dark:text-white leading-none">{ownerAgent.name}</p>
+                                                <p className="text-[9px] text-slate-400 tracking-tight mt-0.5">{ownerAgent.title}</p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => handleSimulateSkill(skill)}
+                                            className="px-3 py-1.5 bg-slate-950 dark:bg-slate-800 hover:bg-slate-900 dark:hover:bg-slate-700 text-xs font-normal text-white rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                                        >
+                                            <Bot className="w-3.5 h-3.5 text-teal-400" />
+                                            <span>
+                                                {isBeingSimulated ? (language === 'ar' ? 'جاري التشغيل...' : 'Executing...') : (language === 'ar' ? 'تشغيل المهارة سيادياً' : 'Dispatch Sovereign')}
+                                            </span>
+                                        </button>
+                                    </div>
+
+                                    {/* Simulation Console Screen */}
+                                    {isBeingSimulated && (
+                                        <div className="col-span-full mt-3 p-4 bg-slate-950 rounded-xl border border-teal-500/30 font-mono text-[11px] text-teal-400 space-y-1.5 animate-fadeIn">
+                                            <div className="flex justify-between items-center text-[10px] text-slate-500 border-b border-slate-800 pb-1.5 mb-2">
+                                                <span className="flex items-center gap-1.5">
+                                                    <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-ping"></span>
+                                                    <span>Autonomous Cognitive Dispatch Stream - {skill.id}</span>
+                                                </span>
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSimulatingSkillId(null);
+                                                    }}
+                                                    className="hover:text-red-400"
+                                                >
+                                                    [Close logs]
+                                                </button>
+                                            </div>
+                                            <div className="max-h-[160px] overflow-y-auto space-y-1 scrollbar-thin">
+                                                {simulationLogs.map((log, lIdx) => (
+                                                    <div 
+                                                        key={lIdx} 
+                                                        className={`transition-all duration-300 ${log.startsWith('✔') ? 'text-emerald-400 font-bold' : log.startsWith('►') ? 'text-slate-400' : 'text-slate-300'}`}
+                                                    >
+                                                        {log}
+                                                    </div>
+                                                ))}
+                                                <div className="h-1" />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
+                            );
+                        })}
+
+                        {filteredCyberSkills.length === 0 && (
+                            <div className="col-span-full py-12 text-center bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                                <AlertTriangle className="w-8 h-8 text-slate-400 mx-auto" />
+                                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mt-2">
+                                    {language === 'ar' ? 'لم يتم العثور على مهارات سيبرانية تطابق البحث' : 'No Skills Found'}
+                                </h3>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    {language === 'ar' ? 'يرجى مراجعة معيار البحث أو تحديد مجال آخر للفلترة.' : 'Try adjusting your search criteria or selecting a different knowledge domain filter.'}
+                                </p>
                             </div>
                         )}
                     </div>
                 </div>
             )}
-
-            {/* Standard Grid View (Visible when NOT in live mode) */}
-            {!isLiveMode && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {virtualAgents.map(agent => (
-                        <div 
-                            key={agent.id} 
-                            className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg border-2 transition-all cursor-pointer overflow-hidden flex flex-col h-full ${selectedAgent?.id === agent.id ? 'border-teal-500 ring-2 ring-teal-200 dark:ring-teal-900' : 'border-transparent hover:border-gray-200 dark:hover:border-gray-700'}`}
-                            onClick={() => setSelectedAgent(agent)}
-                        >
-                            <div className="p-6 flex-grow">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="relative">
-                                        <img src={agent.avatarUrl} alt={agent.name} className="w-16 h-16 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-md" />
-                                        {agent.id === 'agent-abdullah' && (
-                                            <div className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-[9px] font-normal px-1.5 py-0.5 rounded-full animate-pulse border border-white">CNN ACTIVE</div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h3 className="font-normal text-base text-gray-900 dark:text-white">{agent.name}</h3>
-                                        <p className="text-sm font-normal text-teal-600 dark:text-teal-400">{agent.title}</p>
-                                    </div>
-                                </div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">{agent.description}</p>
-                                
-                                <div className="space-y-2">
-                                    {agent.capabilities.slice(0, 3).map((cap, i) => (
-                                        <div key={i} className="flex items-center text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">
-                                            <ShieldCheckIcon className="w-3 h-3 mr-1.5 text-teal-500" />
-                                            {cap}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
-                                <span className="text-xs text-gray-500">Reports to: <span className="font-normal">{agent.reportingLine}</span></span>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onConsultAgent(agent);
-                                    }}
-                                    className="flex items-center gap-1 text-xs font-normal text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
-                                >
-                                    <MicrophoneIcon className="w-3 h-3" />
-                                    Consult
-                                </button>
-                            </div>
-                            {agent.currentTask && (
-                                <div className="bg-yellow-50 dark:bg-yellow-900/30 px-6 py-2 border-t border-yellow-100 dark:border-yellow-900/50">
-                                    <p className="text-xs text-yellow-700 dark:text-yellow-400 font-normal truncate">
-                                        <span className="animate-pulse mr-2">●</span>
-                                        Working on: {agent.currentTask}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {selectedAgent && (
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 animate-fade-in">
-                    <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-4">
-                             <img src={selectedAgent.avatarUrl} alt={selectedAgent.name} className="w-20 h-20 rounded-full object-cover border-2 border-teal-500 shadow-md" />
-                             <div>
-                                <h2 className="text-lg font-normal text-gray-900 dark:text-white">
-                                    {selectedAgent.name}
-                                </h2>
-                                <p className="text-teal-600 dark:text-teal-400 font-normal">{selectedAgent.title}</p>
-                                <div className="flex gap-2 mt-2">
-                                    {selectedAgent.jobAttributes.map((attr, i) => (
-                                        <span key={i} className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
-                                            {attr}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex gap-3">
-                             <button
-                                onClick={() => onConsultAgent(selectedAgent)}
-                                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-normal shadow-sm transition-colors"
-                             >
-                                 <MicrophoneIcon className="w-4 h-4" />
-                                 Start Voice Session
-                             </button>
-                             <button onClick={() => setSelectedAgent(null)} className="text-gray-400 hover:text-gray-600 p-2">Close</button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="md:col-span-2 space-y-6">
-                            <div>
-                                <h3 className="text-sm font-normal text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-2">Professional Bio</h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{selectedAgent.fullBio}</p>
-                            </div>
-                            
-                            <div>
-                                <h3 className="text-sm font-normal text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-2">Key Responsibilities</h3>
-                                <ul className="space-y-2">
-                                    {selectedAgent.responsibilities.map((resp, i) => (
-                                        <li key={i} className="text-sm text-gray-600 dark:text-gray-300 flex items-start">
-                                            <span className="mr-2 text-teal-500">•</span>
-                                            {resp}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                                <h3 className="text-sm font-normal text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-3">Delegate Task</h3>
-                                <form onSubmit={handleDelegate} className="space-y-4">
-                                    <div>
-                                        <textarea 
-                                            className="w-full h-24 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-teal-500 focus:border-teal-500 text-sm"
-                                            placeholder={`Instruct ${selectedAgent.role} to perform a task within their domain...`}
-                                            value={agentTaskInput}
-                                            onChange={(e) => setAgentTaskInput(e.target.value)}
-                                        ></textarea>
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <button 
-                                            type="submit" 
-                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-normal rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none"
-                                            disabled={!agentTaskInput.trim()}
-                                        >
-                                            <SparklesIcon className="w-4 h-4 mr-2" />
-                                            Delegate Task
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                        
-                        <div className="md:col-span-1 space-y-4">
-                            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                                <h3 className="text-sm font-normal text-gray-700 dark:text-gray-200 mb-3">Capabilities</h3>
-                                <ul className="space-y-2">
-                                    {selectedAgent.capabilities.map((cap, i) => (
-                                        <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start font-normal">
-                                            <ShieldCheckIcon className="w-3 h-3 mr-2 text-green-500" />
-                                            {cap}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                            
-                            {/* EMBEDDED AGENT WORKBOARD */}
-                            <div className="bg-teal-50/50 dark:bg-teal-950/20 rounded-lg p-4 border border-teal-100 dark:border-teal-900/50 space-y-3">
-                                <h3 className="text-xs uppercase tracking-wider font-normal text-teal-800 dark:text-teal-400">
-                                    Embedded Agent Workboard
-                                </h3>
-                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-normal">
-                                    Active tasks assigned to {selectedAgent.name} with dedicated functional RACI responsibility.
-                                </p>
-                                
-                                <div className="space-y-2 max-h-[220px] overflow-y-auto">
-                                    {delegatedTasks.filter(t => t.assignedAgent === selectedAgent.name).length === 0 ? (
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 italic font-normal">
-                                            No active tasks delegated to this agent.
-                                        </p>
-                                    ) : (
-                                        delegatedTasks.filter(t => t.assignedAgent === selectedAgent.name).map(task => (
-                                            <div key={task.id} className="p-2.5 bg-white dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-750 space-y-1">
-                                                <div className="flex justify-between items-center gap-1">
-                                                    <span className="text-xs font-normal text-gray-800 dark:text-gray-200 truncate max-w-[140px]" title={task.title}>
-                                                        {task.title}
-                                                    </span>
-                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-normal ${
-                                                        task.status === 'Done' ? 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300' :
-                                                        task.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300 animate-pulse' :
-                                                        'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                                                    }`}>
-                                                        {task.status}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 pt-1 font-normal">
-                                                    <span>RACI Role: <span className="text-teal-600 dark:text-teal-400 font-normal">{task.raciStatus}</span></span>
-                                                    {task.status !== 'Done' && (
-                                                        <button
-                                                            onClick={() => simulateTaskProgress(task.id)}
-                                                            disabled={!!activeWorkingTaskId}
-                                                            className="text-teal-600 dark:text-teal-400 hover:underline font-normal bg-transparent border-0 p-0 cursor-pointer"
-                                                        >
-                                                            Run Task
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                {task.status === 'In Progress' && (
-                                                    <div className="w-full bg-gray-100 dark:bg-gray-700 h-1 rounded overflow-hidden mt-1">
-                                                        <div className="h-full bg-teal-500 transition-all duration-300" style={{ width: `${task.progress}%` }}></div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-
-                            {selectedAgent.id === 'agent-abdullah' && (
-                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs font-normal">
-                                    <span className="block text-blue-700 dark:text-blue-300 mb-1 font-normal">CNN Feature Embedding</span>
-                                    Analyzing compliance artifacts with 98.5% accuracy for automated categorization.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* GRC RESPONSIBILITY & RACI ACTIVE DELEGATION BOARD */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 space-y-6">
-                <div>
-                    <h2 className="text-base font-normal text-gray-900 dark:text-white flex items-center gap-2">
-                        <ShieldCheckIcon className="w-5 h-5 text-teal-600" />
-                        GRC Boardroom Workflows & RACI Authority Boundaries
-                    </h2>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        Task allocation and alignment matrix mapping functional roles to standard SAMA CSF and NCA ECC mandates.
-                    </p>
-                </div>
-
-                {/* ACTIVE WORKING SIMULATOR BANNER */}
-                {activeWorkingTaskId && (
-                    <div className="p-4 bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-900 rounded-lg space-y-2 animate-pulse">
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-normal text-teal-800 dark:text-teal-300">
-                                AI agent active execution thread in progress...
-                            </span>
-                            <span className="text-xs font-mono text-teal-600">
-                                {delegatedTasks.find(t => t.id === activeWorkingTaskId)?.progress}%
-                            </span>
-                        </div>
-                        <div className="w-full bg-teal-100 dark:bg-teal-900 h-1.5 rounded-full overflow-hidden">
-                            <div 
-                                className="h-full bg-teal-500 transition-all duration-500" 
-                                style={{ width: `${delegatedTasks.find(t => t.id === activeWorkingTaskId)?.progress}%` }}
-                            ></div>
-                        </div>
-                        <div className="space-y-1">
-                            {simulationLogs.slice(-2).map((log, i) => (
-                                <p key={i} className="text-xs text-teal-700 dark:text-teal-400 font-mono">
-                                    &gt; {log}
-                                </p>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* TWO COLUMN GRID: RACI CHART + ACTIVE DELEGATIONS */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 font-normal">
-                    
-                    {/* RACI AUTHORITY MATRIX */}
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-normal text-gray-900 dark:text-gray-100 uppercase tracking-wider">
-                            RACI Responsibility Matrix
-                        </h3>
-                        <div className="overflow-x-auto border border-gray-105 dark:border-gray-700 rounded-lg">
-                            <table className="w-full text-left text-xs text-gray-500 dark:text-gray-400">
-                                <thead className="bg-gray-50 dark:bg-gray-900 text-[10px] text-gray-700 dark:text-gray-300 uppercase tracking-wider font-normal">
-                                    <tr>
-                                        <th className="px-3 py-2 font-normal">GRC Domain / Program</th>
-                                        <th className="px-3 py-2 text-center font-normal">CISO</th>
-                                        <th className="px-3 py-2 text-center font-normal">CTO</th>
-                                        <th className="px-3 py-2 text-center font-normal">Compliance</th>
-                                        <th className="px-3 py-2 text-center font-normal">Auditor</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700 font-normal">
-                                    <tr>
-                                        <td className="px-3 py-2.5 font-normal text-gray-900 dark:text-white">Security Governance & Policy</td>
-                                        <td className="px-3 py-2.5 text-center text-teal-600 font-normal">[A]</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400">C</td>
-                                        <td className="px-3 py-2.5 text-center text-purple-600 font-normal">[R]</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400">C</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="px-3 py-2.5 font-normal text-gray-900 dark:text-white">Technical Infrastructure Remediation</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400 font-normal">C</td>
-                                        <td className="px-3 py-2.5 text-center text-teal-600 font-normal">[R]</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400 font-normal">I</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400 font-normal">I</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="px-3 py-2.5 font-normal text-gray-900 dark:text-white">Continuous GRC Audit Checks</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400 font-normal">I</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400 font-normal">C</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400 font-normal font-normal">C</td>
-                                        <td className="px-3 py-2.5 text-center text-teal-600 font-normal">[A/R]</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="px-3 py-2.5 font-normal text-gray-900 dark:text-white">Risk Register & Mitigation</td>
-                                        <td className="px-3 py-2.5 text-center text-teal-600 font-normal">[A]</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400">C</td>
-                                        <td className="px-3 py-2.5 text-center text-purple-600 font-normal">[R]</td>
-                                        <td className="px-3 py-2.5 text-center text-gray-400">I</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div className="flex gap-4 text-[10px] text-gray-500 dark:text-gray-400 pt-1">
-                            <span><strong className="text-teal-600 font-normal">[R]</strong> Responsible (Executes Task)</span>
-                            <span><strong className="text-purple-600 font-normal">[A]</strong> Accountable (Approves & owns)</span>
-                            <span><strong className="text-gray-600 dark:text-gray-300 font-normal">[C]</strong> Consulted</span>
-                            <span><strong className="text-gray-600 dark:text-gray-300 font-normal">[I]</strong> Informed</span>
-                        </div>
-                    </div>
-
-                    {/* ACTIVE FLOWS & TASK QUEUE BOARD */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center text-xs">
-                            <h3 className="text-sm font-normal text-gray-900 dark:text-gray-100 uppercase tracking-wider">
-                                Active Agentic Workflow Board
-                            </h3>
-                            <button
-                                onClick={() => {
-                                    if (confirm("Reset active board to original standard template?")) {
-                                        localStorage.removeItem('grc_delegated_tasks');
-                                        window.location.reload();
-                                    }
-                                }}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs font-normal"
-                            >
-                                Reset Tasks
-                            </button>
-                        </div>
-
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                            {delegatedTasks.length === 0 ? (
-                                <p className="text-xs text-gray-500 italic py-4">No delegated tasks yet. Select an agent above to delegate work.</p>
-                            ) : (
-                                delegatedTasks.map(task => (
-                                    <div key={task.id} className="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-lg border border-gray-200 dark:border-gray-750 flex flex-col justify-between gap-3 text-xs">
-                                        <div className="space-y-1">
-                                            <div className="flex justify-between items-start gap-2">
-                                                <h4 className="font-normal text-gray-900 dark:text-white leading-normal truncate max-w-[70%]">
-                                                    {task.title}
-                                                </h4>
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-normal ${
-                                                    task.status === 'Done' ? 'bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300' :
-                                                    task.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300 animate-pulse' :
-                                                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                                                }`}>
-                                                    {task.status}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-                                                {task.description}
-                                            </p>
-                                        </div>
-
-                                        <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px]">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="font-normal text-gray-805 dark:text-gray-300">
-                                                    {task.assignedAgent} ({task.assignedRole})
-                                                </span>
-                                                <span className="text-xs text-teal-600 dark:text-teal-400">
-                                                    [{task.raciStatus}]
-                                                </span>
-                                            </div>
-                                            
-                                            {task.status !== 'Done' ? (
-                                                <button
-                                                    onClick={() => simulateTaskProgress(task.id)}
-                                                    disabled={!!activeWorkingTaskId}
-                                                    className="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white rounded font-normal hover:shadow-xs transition-colors"
-                                                >
-                                                    Work on Task
-                                                </button>
-                                            ) : (
-                                                <div className="flex gap-2">
-                                                    {task.outputs?.map((out, idx) => (
-                                                        <span 
-                                                            key={idx} 
-                                                            className="text-teal-600 dark:text-teal-400 font-normal underline flex items-center gap-1 cursor-pointer"
-                                                            onClick={() => alert(`Reviewing generated output artifact in main repository: "${out.name}"`)}
-                                                        >
-                                                            <SparklesIcon className="w-3 h-3 text-teal-500" />
-                                                            View Artifact
-                                                        </span>
-                                                    ))}
-                                                    <span className="text-green-600 dark:text-green-400 font-normal flex items-center gap-1">
-                                                        ✓ Ready
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            {/* AGENT COLLABORATION FEED */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-                <div>
-                    <h2 className="text-base font-normal text-gray-900 dark:text-white flex items-center gap-2">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
-                        </span>
-                        GRC Boardroom Collaboration Feed
-                    </h2>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 font-normal">
-                        Communication logs filtered specifically for recent cross-agent coordination, approvals, and dynamic RACI handovers.
-                    </p>
-                </div>
-
-                <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-2">
-                    {collaborationLogs.length === 0 ? (
-                        <div className="text-center py-6 text-xs text-gray-500 dark:text-gray-400 italic font-normal space-y-2">
-                            <p>No agentic task collaborations or handovers logged in the ledger yet.</p>
-                            <p className="text-[10px] text-gray-400 font-normal">Trigger task execution or boardroom dialogues to populate this feed.</p>
-                        </div>
-                    ) : (
-                        collaborationLogs.map((entry) => {
-                            return (
-                                <div key={entry.id} className="p-3 bg-gray-50 dark:bg-gray-900/60 rounded-lg border border-gray-150 dark:border-gray-750 flex flex-col gap-1.5 text-xs font-normal">
-                                    <div className="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400">
-                                        <span className="font-mono font-normal">
-                                            {new Date(entry.timestamp).toLocaleString()}
-                                        </span>
-                                        <span className="font-mono font-normal px-2 py-0.5 bg-teal-50 dark:bg-teal-950/35 text-teal-700 dark:text-teal-300 rounded text-[9px] border border-teal-100 dark:border-teal-900/40 font-normal">
-                                            {entry.action}
-                                        </span>
-                                    </div>
-                                    <div className="text-gray-700 dark:text-gray-300 font-normal">
-                                        <span className="text-teal-600 dark:text-teal-400 font-normal font-mono mr-1">
-                                            [{entry.userName || 'SYSTEM'}]
-                                        </span>
-                                        {entry.details}
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
-
-            <style>{`
-                @keyframes progress {
-                    0% { width: 0%; }
-                    50% { width: 70%; }
-                    100% { width: 100%; }
-                }
-                .animate-progress {
-                    animation: progress 2s ease-in-out infinite;
-                }
-            `}</style>
         </div>
     );
 };

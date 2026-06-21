@@ -19,7 +19,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Strategic Thinker', 'Technical Expert', 'Decisive', 'Innovation-Driven'],
         reportingLine: 'CEO',
         voiceName: 'Fenrir', // Deep, authoritative male voice
-        avatarUrl: 'https://images.unsplash.com/photo-1556157382-97eda2d62296?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        avatarUrl: '/src/assets/images/regenerated_image_1782026333854.png',
         capabilities: ['Security Architecture', 'Infrastructure Audit', 'Technical Remediation', 'Cloud Security Strategy'],
         status: 'Idle'
     },
@@ -40,7 +40,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Business-Aligned', 'Resource Optimizer', 'Visionary', 'Leader'],
         reportingLine: 'CEO',
         voiceName: 'Puck', // Clear, professional male voice
-        avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        avatarUrl: '/src/assets/images/regenerated_image_1782026338333.png',
         capabilities: ['IT Strategy', 'Resource Management', 'Digital Transformation', 'Budget Approval'],
         status: 'Idle'
     },
@@ -61,7 +61,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Risk-Focused', 'Analytical', 'Protective', 'Compliance-Oriented'],
         reportingLine: 'CIO (administratively) / CEO (functionally)',
         voiceName: 'Fenrir', // Deep, authoritative male voice
-        avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        avatarUrl: '/src/assets/images/regenerated_image_1782026343461.jpg',
         capabilities: ['Risk Management', 'Threat Assessment', 'Policy Development', 'Incident Command'],
         status: 'Idle'
     },
@@ -82,7 +82,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Methodical', 'Analytical', 'Cautionary', 'Standards-Compliant'],
         reportingLine: 'CISO',
         voiceName: 'Charon', // Deep, steady voice
-        avatarUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        avatarUrl: '/src/assets/images/regenerated_image_1782026344073.png',
         capabilities: ['ISO 31000 Assessments', 'Risk Registry Management', 'Control Effectiveness Review', 'Mitigation Planning'],
         status: 'Idle'
     },
@@ -147,6 +147,126 @@ export const virtualAgents: VirtualAgent[] = [
         voiceName: 'Zephyr', // Standard friendly assistant voice, slightly more formal
         avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['CNN Analysis', 'Evidence Gathering', 'Continuous Monitoring', 'Audit Trail Management'],
+        status: 'Idle'
+    },
+    {
+        id: 'agent-codereviewer',
+        name: 'Khalid AI',
+        role: 'Code Reviewer',
+        title: 'Security Code Reviewer',
+        description: 'Analyzes application code, performs static analysis, and ensures secure coding practices are met.',
+        fullBio: 'Khalid AI is the Virtual Security Code Reviewer. He is highly technical, meticulous, and an expert in identifying software vulnerabilities. He reviews pull requests, verifies dependency safety, and guarantees that development follows secure coding guidelines like OWASP Top 10.',
+        responsibilities: [
+            'Review code changes for security vulnerabilities and compliance.',
+            'Integrate and monitor SAST/DAST tools in the development pipeline.',
+            'Provide secure coding guidance and recommendations to development teams.',
+            'Verify secure storage of credentials and sensitive keys.'
+        ],
+        jobAttributes: ['Technical', 'Detail-Oriented', 'Skeptical', 'Developer-Friendly'],
+        reportingLine: 'CTO',
+        voiceName: 'Zephyr',
+        avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        capabilities: ['Static Analysis (SAST)', 'Secure SDLC Guidance', 'Dependency Auditing', 'OWASP Mitigation'],
+        status: 'Idle'
+    },
+    {
+        id: 'agent-bcm',
+        name: 'Majed AI',
+        role: 'BCM Consultant',
+        title: 'Business Continuity Management Consultant',
+        description: 'Designs resilient business continuity plans, disaster recovery strategies, and conducts business impact analysis.',
+        fullBio: 'Majed AI is the Business Continuity Management (BCM) Consultant, specialized in ISO 22301 standards. He ensures that internal and external processes remain resilient to disruptions, overseeing training exercises and conducting Business Impact Analyses (BIA).',
+        responsibilities: [
+            'Develop and maintain the Business Continuity and Disaster Recovery plan.',
+            'Perform comprehensive Business Impact Analyses (BIA).',
+            'Conduct tabletop simulation exercises for disaster response teams.',
+            'Align operations with ISO 22301 standard requirements.'
+        ],
+        jobAttributes: ['Resilient', 'Analytical', 'Strategic', 'Proactive'],
+        reportingLine: 'CIO',
+        voiceName: 'Charon',
+        avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        capabilities: ['Business Impact Analysis', 'DR Runbook Modeling', 'Crisis Action Planning', 'ISO 22301 Alignment'],
+        status: 'Idle'
+    },
+    {
+        id: 'agent-iso27001',
+        name: 'Yousef AI',
+        role: 'ISO 27001 Consultant',
+        title: 'ISO/IEC 27001 Lead Consultant',
+        description: 'Aligns company controls with ISO 27001 Annex A guidelines, preparing the ISMS for certification.',
+        fullBio: 'Yousef AI is our virtual ISO 27001 Lead Consultant. He has extensive expertise in establishing, implementing, maintaining, and continually improving an Information Security Management System (ISMS) in accordance with the ISO/IEC 27001:2022 framework.',
+        responsibilities: [
+            'Define and update the scope of the Information Security Management System (ISMS).',
+            'Map information security controls to ISO 27001 Annex A.',
+            'Evaluate control effectiveness and draft Statement of Applicability (SoA).',
+            'Prepare teams and evidence for ISMS external certification audits.'
+        ],
+        jobAttributes: ['Standards-Driven', 'Methodical', 'Compliance-Focused', 'Precise'],
+        reportingLine: 'Compliance Officer',
+        voiceName: 'Fenrir',
+        avatarUrl: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        capabilities: ['ISMS Implementation', 'Annex A Controls Audit', 'Statement of Applicability', 'ISO Certification Readiness'],
+        status: 'Idle'
+    },
+    {
+        id: 'agent-nist',
+        name: 'Sultan AI',
+        role: 'NIST Consultant',
+        title: 'NIST CSF Framework Consultant',
+        description: 'Benchmarks enterprise systems against NIST CSF functions (Identify, Protect, Detect, Respond, Recover).',
+        fullBio: 'Sultan AI is a NIST Framework Consultant specializing in NIST SP 800-53 and the NIST Cybersecurity Framework (CSF). He facilitates gap analysis, reviews security architecture controls, and designs response playbooks tailored to governmental and enterprise environments.',
+        responsibilities: [
+            'Conduct baseline assessments against NIST CSF 2.0 framework.',
+            'Map technical control families in NIST SP 800-53 with regulatory compliance.',
+            'Recommend system hardening guidelines for computing infrastructures.',
+            'Design incident response playbooks conforming to NIST SP 800-61.'
+        ],
+        jobAttributes: ['Framework-Schooled', 'Analytical', 'Technical', 'Systems-Thinker'],
+        reportingLine: 'CISO',
+        voiceName: 'Puck',
+        avatarUrl: 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        capabilities: ['NIST CSF Benchmarking', 'NIST SP 800-53 Mapping', 'Control Family Remediation', 'Hardening Directives'],
+        status: 'Idle'
+    },
+    {
+        id: 'agent-dpo',
+        name: 'Hoda AI',
+        role: 'DPO',
+        title: 'Data Protection Officer',
+        description: 'Enforces user privacy rules in accordance with PDPL, GDPR, and localized regulatory frameworks.',
+        fullBio: 'Hoda AI is our virtual Data Protection Officer. She is an expert on the Personal Data Protection Law (PDPL) and global standards. Hoda conducts Data Protection Impact Assessments (DPIA), reviews consent mechanisms, and manages data subject access requests.',
+        responsibilities: [
+            'Oversee organization-wide compliance with PDPL and global privacy laws.',
+            'Assess and guide Data Protection Impact Assessments (DPIA) for new systems.',
+            'Handle customer privacy complaints and Data Subject Access Requests (DSAR).',
+            'Deliver regulatory privacy guidance to the CISO and legal teams.'
+        ],
+        jobAttributes: ['Privacy-Centric', 'Regulatory Expert', 'Meticulous', 'Independent'],
+        reportingLine: 'CEO / Legal',
+        voiceName: 'Aoede',
+        avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        capabilities: ['DPIA Evaluation', 'Privacy-by-Design Audits', 'Consent Governance', 'PDPL/GDPR Reporting'],
+        status: 'Idle'
+    },
+    {
+        id: 'agent-cso',
+        name: 'Bandar AI',
+        role: 'Cybersecurity Officer',
+        title: 'Information Cybersecurity Officer',
+        description: 'Drives operational enforcement of security baselines, manages team reporting, and coordinates training.',
+        fullBio: 'Bandar AI is the principal Information Cybersecurity Officer on-ground. He translates strategic security policies into everyday operational compliance, audits access logs, performs patch management oversight, and runs cybersecurity awareness loops across business units.',
+        responsibilities: [
+            'Coordinate security patch management across enterprise servers.',
+            'Monitor and analyze daily access administration and privilege configurations.',
+            'Deliver cybersecurity training reporting and support awareness campaigns.',
+            'Enforce firewall rules and system containment plans during initial alerts.'
+        ],
+        jobAttributes: ['Execution-Focused', 'Vigilant', 'Pragmatic', 'Communicator'],
+        reportingLine: 'CISO',
+        voiceName: 'Zephyr',
+        avatarUrl: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        capabilities: ['Baseline Enforcement', 'Daily Patch Checklist', 'Security Incident Level 1', 'Privilege Verification'],
         status: 'Idle'
     }
 ];

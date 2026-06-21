@@ -19,7 +19,7 @@ interface ComplianceAgentPageProps {
 }
 
 export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunAnalysis, onGenerateDocuments, agentLog, permissions, assessments }) => {
-    const [activeTab, setActiveTab] = useState<'text' | 'vision' | 'orchestrator'>('orchestrator');
+    const [activeTab, setActiveTab] = useState<'text' | 'vision' | 'orchestrator' | 'performance'>('orchestrator');
     const [gaps, setGaps] = useState<ComplianceGap[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -34,6 +34,10 @@ export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunA
     const [visionResults, setVisionResults] = useState<{item: AssessmentItem, result: EvidenceValidation}[]>([]);
     const [processedCount, setProcessedCount] = useState(0);
     const [totalEvidence, setTotalEvidence] = useState(0);
+
+    // Performance Audit State
+    const [isAuditRunning, setIsAuditRunning] = useState(false);
+    const [auditProgress, setAuditProgress] = useState(0);
 
     const canRunAgent = permissions.has('complianceAgent:run');
 
@@ -117,6 +121,13 @@ export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunA
                     >
                         <EyeIcon className="w-4 h-4" />
                         Deep Vision Auditor
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('performance')}
+                        className={`whitespace-nowrap py-4 px-1 border-b-2 font-normal text-sm flex items-center gap-2 ${activeTab === 'performance' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                    >
+                        <ActivityIcon className="w-4 h-4 text-teal-500" />
+                        Agent Performance Report
                     </button>
                 </nav>
             </div>
@@ -358,6 +369,238 @@ export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunA
                             <p className="text-gray-500">No visual audit results yet. Upload evidence in assessment controls and click "Run CNN Validation Protocol".</p>
                         </div>
                     )}
+                </div>
+            )}
+
+            {activeTab === 'performance' && (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="bg-gradient-to-r from-teal-900 to-slate-905 text-white rounded-2xl p-6 border border-teal-500/30 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <span className="bg-teal-500/20 text-teal-300 text-[10px] font-mono border border-teal-500/30 uppercase tracking-widest px-2.5 py-1 rounded">
+                                    Auditor General Boardroom Ledger
+                                </span>
+                            </div>
+                            <h2 className="text-xl font-normal tracking-tight pt-1">Agentic Audit Contribution &amp; Performance Ledger</h2>
+                            <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                                This dashboard aggregates, assesses, and grades the sovereign actions taken by our Virtual GRC specialists during the latest NCA ECC &amp; SAMA CSF compliance cycles, matching each contribution directly to its corresponding, established technical skill within the Anthropic 754 cybersecurity repository.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setIsAuditRunning(true);
+                                setAuditProgress(10);
+                                const interval = setInterval(() => {
+                                    setAuditProgress(prev => {
+                                        if (prev >= 100) {
+                                            clearInterval(interval);
+                                            setIsAuditRunning(false);
+                                            return 100;
+                                        }
+                                        return prev + 15;
+                                    });
+                                }, 300);
+                            }}
+                            disabled={isAuditRunning}
+                            className="bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 text-white font-normal px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 flex-shrink-0"
+                        >
+                            {isAuditRunning ? (
+                                <>
+                                    <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <span>Running Boardroom Integrity Analysis ({auditProgress}%)</span>
+                                </>
+                            ) : (
+                                <>
+                                    <ActivityIcon className="w-4 h-4 text-teal-300" />
+                                    <span>Audit Consensus Dry-Run</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Progress Bar of Simulation */}
+                    {isAuditRunning && (
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div className="bg-teal-500 h-full transition-all duration-300" style={{ width: `${auditProgress}%` }} />
+                        </div>
+                    )}
+
+                    {/* Contribution matrix grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* CISO Profile */}
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Ahmed AI" className="w-10 h-10 rounded-full object-cover border border-teal-500 shadow" />
+                                    <div>
+                                        <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Ahmed AI</h4>
+                                        <p className="text-xs text-teal-600 dark:text-teal-400 font-mono">CISO (Chief Information Security Officer)</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                    Governed threat models, structured response timelines, orchestrated corporate audit strategies, and approved the final consensus framework registry.
+                                </p>
+                            </div>
+                            <div className="space-y-2 border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sovereign Skills Deployed:</p>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-012] Endpoint Isolation</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-302] Threat Hunting Response</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* CTO Profile */}
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Fahad AI" className="w-10 h-10 rounded-full object-cover border border-teal-500 shadow" />
+                                    <div>
+                                        <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Fahad AI</h4>
+                                        <p className="text-xs text-teal-600 dark:text-teal-400 font-mono">CTO (Chief Technology Officer)</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                    Enforced network security controls, specified load balancers, configured secure reverse proxy gating, and streamlined certificate parameters.
+                                </p>
+                            </div>
+                            <div className="space-y-2 border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sovereign Skills Deployed:</p>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-084] Symmetric Key Lifecycle</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-109] Reverse Proxy Gateways</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* CIO Profile */}
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Mohammed AI" className="w-10 h-10 rounded-full object-cover border border-teal-500 shadow" />
+                                    <div>
+                                        <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Mohammed AI</h4>
+                                        <p className="text-xs text-teal-600 dark:text-teal-400 font-mono">CIO (Chief Information Officer)</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                    Managed corporate asset classifications, verified cloud database storage configurations, and aligned technical encryption controls.
+                                </p>
+                            </div>
+                            <div className="space-y-2 border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sovereign Skills Deployed:</p>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-041] Database Cryptography</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-055] Multi-cloud Sec Auditing</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* DPO Profile */}
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Hoda AI" className="w-10 h-10 rounded-full object-cover border border-teal-500 shadow" />
+                                    <div>
+                                        <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Hoda AI</h4>
+                                        <p className="text-xs text-teal-600 dark:text-teal-400 font-mono">DPO (Data Protection Officer)</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                    Enforced Saudi Personal Data Protection Law (PDPL), verified consent tracking metrics, and audited compliance mappings.
+                                </p>
+                            </div>
+                            <div className="space-y-2 border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sovereign Skills Deployed:</p>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-162] PDPL Privacy Registry</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-203] Consent Verification</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ISO Specialist Profile */}
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Yousef AI" className="w-10 h-10 rounded-full object-cover border border-teal-500 shadow" />
+                                    <div>
+                                        <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Yousef AI</h4>
+                                        <p className="text-xs text-teal-600 dark:text-teal-400 font-mono">ISO 27001 / ISMS Specialist</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                    Author of ISMS manual, governed Statement of Applicability (SoA) and performed Annex A control cross-checks.
+                                </p>
+                            </div>
+                            <div className="space-y-2 border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sovereign Skills Deployed:</p>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-402] SOA Annex A Audit</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-415] Annex A Asset Audit</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* NIST Specialist Profile */}
+                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="Sultan AI" className="w-10 h-10 rounded-full object-cover border border-teal-500 shadow" />
+                                    <div>
+                                        <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Sultan AI</h4>
+                                        <p className="text-xs text-teal-600 dark:text-teal-400 font-mono">NIST Framework / AI Safety Specialist</p>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                    Evaluated model hallucinations, deployed adversarial alignments, and implemented safety checkpoints under NIST AI RMF.
+                                </p>
+                            </div>
+                            <div className="space-y-2 border-t border-slate-105 dark:border-gray-700/60 pt-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sovereign Skills Deployed:</p>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-702] NIST AI RMF Alignment</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900 p-2 rounded">
+                                        <span className="font-mono text-teal-600 dark:text-teal-300 font-semibold text-[10px]">[CS-711] Model Drifting Guard</span>
+                                        <span className="text-[10px] text-green-500 font-bold uppercase">Pass</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 

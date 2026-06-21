@@ -257,7 +257,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                      onClick={() => handleNavClick('virtualDepartment')}
                    >
                        <div className="relative flex-shrink-0">
-                           <img src={agent.avatarUrl} alt={agent.name} className="w-6.5 h-6.5 rounded-full object-cover border border-black/10 dark:border-white/10" />
+                           <img src={agent.avatarUrl} alt={agent.name} className="w-6 h-6 rounded-full object-cover border border-black/10 dark:border-white/10" />
                            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-white dark:border-slate-900"></span>
                        </div>
                        <div className="min-w-0">

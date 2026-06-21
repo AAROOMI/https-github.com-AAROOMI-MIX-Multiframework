@@ -454,6 +454,21 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ doc, onClose,
         }
     };
 
+    const handleDownloadJSON = () => {
+        try {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(doc, null, 2));
+            const link = document.createElement('a');
+            link.setAttribute("href", dataStr);
+            link.setAttribute("download", `policy-${doc.controlId}.json`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error generating JSON file:', error);
+            alert('An error occurred while generating the JSON document.');
+        }
+    };
+
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -583,6 +598,9 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ doc, onClose,
                       </button>
                       <button onClick={handleDownloadWord} className="flex items-center gap-2 text-sm font-normal text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 py-2 px-4 rounded-md shadow-sm transition-colors">
                         Download Word
+                      </button>
+                      <button onClick={handleDownloadJSON} className="flex items-center gap-2 text-sm font-normal text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 py-2 px-4 rounded-md shadow-sm transition-colors">
+                        Download JSON
                       </button>
                     </div>
                     {isPending && isActionable && viewingVersion === null && (

@@ -131,6 +131,18 @@ export const LiveAssistantWidget: React.FC<LiveAssistantProps & { onStatusChange
         - **Recent Activity:**
         ${recentActivity}
         
+        **SOVEREIGN REPOSITORY KNOWLEDGE BASE (ANTHROPIC 754 SKILLS):**
+        - **Repository Link:** https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git
+        - **Total Agentic Skills:** 754 Production-Ready Cognitive Capsules
+        - **Domains Coverage:** 26 Specialized Cyber Domains (such as Cloud Security, Digital Forensics, Cryptography, AI Safety & NIST AI RMF, DevSecOps, GRC, Threat Hunting, Privacy Governance (PDPL), secure code reviewers, Business Continuity ISO 22301, etc.)
+        - **Strategic Framework Mappings:**
+          * NCA ECC Mapping: Network Isolation, Patching, OS Hardening, Vulnerability Management.
+          * SAMA CSF Mapping: HSM Key Rotary, Symmetric Keyrings, conditional MFA, Continuous Monitoring logs.
+          * PDPL Mapping: Irreversible masking algorithms, lifecycle privacy flowcharts, PIA/DPIA.
+          * ISO 27001 Mapping: Annex A statement of applicability (SoA), Secure SDLC filters.
+          * ISO 22301 Mapping: BIA modeling, RTO/RPO threshold definitions, Crisis tabletop dry-runs.
+          * NIST AI RMF Mapping: LLM Prompt injection shields, output hallucination grounding.
+
         **APPLICATION ARCHITECTURE KNOWLEDGE:**
         - **Frontend:** React + TypeScript + Tailwind.
         - **Data Layer:** Firebase Firestore (NoSQL).
@@ -458,7 +470,7 @@ export const LiveAssistantWidget: React.FC<LiveAssistantProps & { onStatusChange
                              <div className="flex items-center">
                                 {activeAgent ? (
                                     <div className="mr-3 relative">
-                                        <img src={activeAgent.avatarUrl} alt={activeAgent.name} className="w-10 h-10 rounded-full border-2 border-teal-500" />
+                                        <img src={activeAgent.avatarUrl} alt={activeAgent.name} className="w-8 h-8 rounded-full border-2 border-teal-500" />
                                         <div className="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 rounded-full border border-white"></div>
                                     </div>
                                 ) : (

@@ -4,6 +4,82 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDownIcon, ClipboardIcon, CheckIcon, SparklesIcon, ShieldCheckIcon } from './Icons';
 import type { Domain, Control, Subdomain, GeneratedContent, PolicyDocument, Permission, PolicyTone, PolicyLength } from '../types';
 import { ComplianceAuditModal } from './ComplianceAuditModal';
+import { sampleCyberSkills } from '../data/cybersecuritySkills';
+import { virtualAgents } from '../data/virtualAgents';
+
+const RecommendedAgentCard: React.FC<{ control: Control; subdomain: Subdomain; domain: Domain }> = ({ control, subdomain, domain }) => {
+    // Score & filter
+    const matchedSkills = React.useMemo(() => {
+        const cleanControlId = control.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return sampleCyberSkills.filter(skill => {
+            const hasFrameworkMatch = skill.targetFrameworks.some(f => {
+                const cleanF = f.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return cleanF.includes(cleanControlId) || cleanControlId.includes(cleanF);
+            });
+            if (hasFrameworkMatch) return true;
+
+            const textToSearch = (control.description + ' ' + subdomain.title + ' ' + domain.name).toLowerCase();
+            const skillText = (skill.title + ' ' + skill.description + ' ' + skill.domain).toLowerCase();
+            const words = textToSearch.split(/\s+/).filter(w => w.length > 4);
+            return words.some(w => skillText.includes(w));
+        }).slice(0, 2);
+    }, [control, subdomain, domain]);
+
+    if (matchedSkills.length === 0) return null;
+
+    return (
+        <div className="mt-6 p-4 rounded-xl border border-teal-500/30 bg-teal-50/50 dark:bg-teal-950/25 space-y-3">
+            <div className="flex items-center gap-1.5 text-teal-700 dark:text-teal-400">
+                <span className="inline-block p-1 bg-teal-100 dark:bg-teal-900/30 rounded">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </span>
+                <h5 className="text-[11px] font-bold uppercase tracking-wider">{control.id.startsWith('A.') || control.id.startsWith('8.') ? 'Recommended SAMA/ISO Agent Expertise' : 'Recommended Agent Expertise'}</h5>
+            </div>
+            
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                The integrated 754-skill expert library suggests the following active agent co-pilots for this implementation standard:
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {matchedSkills.map(skill => {
+                    let resolvedId = skill.agentOwnerId;
+                    if (resolvedId === 'agent-cio') resolvedId = 'agent-mohammed';
+                    else if (resolvedId === 'agent-ciso') resolvedId = 'agent-ahmed';
+                    else if (resolvedId === 'agent-cto') resolvedId = 'agent-fahad';
+                    else if (resolvedId === 'agent-charon') resolvedId = 'agent-rashid';
+
+                    const agentInstance = virtualAgents.find(a => a.id === resolvedId) || 
+                                          virtualAgents.find(a => a.role.toLowerCase().includes(skill.agentOwnerId.replace('agent-', ''))) || 
+                                          virtualAgents[0];
+
+                    return (
+                        <div key={skill.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700/80 space-y-2 flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <img src={agentInstance.avatarUrl} alt={agentInstance.name} className="w-6 h-6 rounded-full object-cover border border-teal-500" />
+                                    <div className="text-left leading-tight">
+                                        <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{agentInstance.name}</p>
+                                        <p className="text-[9px] text-teal-600 dark:text-teal-400 font-mono">{agentInstance.role}</p>
+                                    </div>
+                                </div>
+                                <div className="text-[10px] text-gray-600 dark:text-gray-300 leading-normal border-t border-gray-100 dark:border-gray-700/60 pt-1.5">
+                                    <span className="font-semibold text-gray-700 dark:text-gray-400">Skill ({skill.id.toUpperCase()}): </span>
+                                    <span>{skill.title}</span>
+                                </div>
+                            </div>
+                            <div className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/60 p-1.5 rounded border border-gray-100 dark:border-gray-800 italic leading-snug">
+                                <span className="font-semibold text-gray-600 dark:text-gray-400 not-italic">Action Target:</span> {skill.technicalAction}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 
 interface ControlDetailProps {
   control: Control;
@@ -246,6 +322,8 @@ const ControlDetail = React.forwardRef<HTMLDivElement, ControlDetailProps>(
                 </ul>
             </div>
         </div>
+        
+        <RecommendedAgentCard control={control} subdomain={subdomain} domain={domain} />
       </div>
 
        {control.history && control.history.length > 0 && (

@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useMemo, useState } from 'react';
 import type { PolicyDocument, User, SearchResult, Domain, DocumentStatus, UserRole, UserTrainingProgress, AssessmentItem, Task, TaskStatus, View, Risk } from '../types';
 import { CheckCircleIcon, CloseIcon, DocumentIcon, FundamentalsBadgeIcon, PhishingBadgeIcon, MalwareBadgeIcon, PasswordBadgeIcon, SafeBrowsingBadgeIcon, RemoteWorkBadgeIcon, SecureCodingBadgeIcon, IncidentResponseBadgeIcon, DataPrivacyBadgeIcon, ExclamationTriangleIcon } from './Icons';
 import { trainingCourses } from '../data/trainingData';
+import { translations } from '../translations';
 
 declare const Chart: any;
 
@@ -21,6 +22,7 @@ interface DashboardPageProps {
     tasks: Task[];
     setTasks: (updater: React.SetStateAction<Task[]>) => void;
     risks: Risk[];
+    language?: 'en' | 'ar';
 }
 
 const statusToRoleMap: Record<string, UserRole> = {
@@ -466,7 +468,7 @@ const TaskManager: React.FC<{
     );
 };
 
-export const DashboardPage: React.FC<DashboardPageProps> = ({ repository, currentUser, allControls, domains, onSetView, onSelectDomain, trainingProgress, eccAssessment, pdplAssessment, samaCsfAssessment, cmaAssessment, tasks, setTasks, risks }) => {
+export const DashboardPage: React.FC<DashboardPageProps> = ({ repository, currentUser, allControls, domains, onSetView, onSelectDomain, trainingProgress, eccAssessment, pdplAssessment, samaCsfAssessment, cmaAssessment, tasks, setTasks, risks, language = 'en' }) => {
     const stats = useMemo(() => {
         const approvedCount = repository.filter(doc => doc.status === 'Approved').length;
         const pendingCount = repository.filter(doc => doc.status.startsWith('Pending')).length;
@@ -539,52 +541,80 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ repository, curren
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-base font-normal text-gray-800 dark:text-gray-100 tracking-tight">Compliance Dashboard</h1>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Welcome, {currentUser?.name}. Here's your compliance overview.</p>
+                <h1 className="text-base font-normal text-gray-800 dark:text-gray-100 tracking-tight">
+                    {language === 'ar' ? 'لوحة معلومات الامتثال' : 'Compliance Dashboard'}
+                </h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {language === 'ar' 
+                      ? `مرحباً بك، ${currentUser?.name}. إليك نظرة عامة على الامتثال لمعايير المنصة.` 
+                      : `Welcome, ${currentUser?.name}. Here's your compliance overview.`}
+                </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 <OverallComplianceChart percentage={stats.compliance} />
                 <Card className="flex flex-col justify-between">
                     <div>
-                        <h3 className="text-sm font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wider">Control Coverage</h3>
+                        <h3 className="text-sm font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            {language === 'ar' ? 'تغطية الضوابط' : 'Control Coverage'}
+                        </h3>
                         <p className="mt-2 text-xl font-normal text-gray-900 dark:text-gray-100">{stats.coverage.toFixed(0)}%</p>
                     </div>
                     <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-normal text-teal-600 dark:text-teal-400">{repository.length}</span> of <span className="font-normal">{stats.totalControls}</span> controls have associated documents.
+                            {language === 'ar' ? (
+                                <>
+                                    تم ربط مستندات بـ <span className="font-normal text-teal-600 dark:text-teal-400">{repository.length}</span> من أصل <span className="font-normal">{stats.totalControls}</span> من الضوابط المحددة.
+                                </>
+                            ) : (
+                                <>
+                                    <span className="font-normal text-teal-600 dark:text-teal-400">{repository.length}</span> of <span className="font-normal">{stats.totalControls}</span> controls have associated documents.
+                                </>
+                            )}
                         </p>
                     </div>
                 </Card>
-                <StatCard title="Approved Policies" value={stats.approvedCount} description="Fully implemented controls." />
+                <StatCard 
+                    title={language === 'ar' ? 'السياسات المعتمدة' : 'Approved Policies'} 
+                    value={stats.approvedCount} 
+                    description={language === 'ar' ? 'الضوابط المطبقة بالكامل وبشكل معتمد.' : 'Fully implemented controls.'} 
+                />
                 
                 {/* Risk Posture Card */}
                 <Card>
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk Posture</h3>
+                        <h3 className="text-sm font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            {language === 'ar' ? 'وضع المخاطر والتهديدات' : 'Risk Posture'}
+                        </h3>
                         <ExclamationTriangleIcon className="w-5 h-5 text-orange-500" />
                     </div>
                     <div className="mt-4 flex items-end justify-between">
                         <div>
                             <p className="text-xl font-normal text-gray-900 dark:text-gray-100">{riskStats.critical}</p>
-                            <p className="text-[10px] font-normal text-red-600 uppercase tracking-wide">Critical Risks</p>
+                            <p className="text-[10px] font-normal text-red-600 uppercase tracking-wide">
+                                {language === 'ar' ? 'مخاطر حرجـة' : 'Critical Risks'}
+                            </p>
                         </div>
                         <div className="text-right">
                             <p className="text-lg font-normal text-gray-700 dark:text-gray-300">{riskStats.high}</p>
-                            <p className="text-[10px] font-normal text-orange-500 uppercase tracking-wide">High Risks</p>
+                            <p className="text-[10px] font-normal text-orange-500 uppercase tracking-wide">
+                                {language === 'ar' ? 'مخاطر عاليـة' : 'High Risks'}
+                            </p>
                         </div>
                     </div>
                     <button 
                         onClick={() => onSetView('riskAssessment')} 
                         className="mt-4 w-full text-[10px] font-normal text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 text-right uppercase tracking-widest"
                     >
-                        View Risk Register &rarr;
+                        {language === 'ar' ? 'عرض سجل المخاطر بالتفصيل ←' : 'View Risk Register \u2192'}
                     </button>
                 </Card>
             </div>
 
             <div className="space-y-4">
-                <h2 className="text-lg font-normal text-gray-800 dark:text-gray-100">Frameworks Compliance</h2>
+                <h2 className="text-lg font-normal text-gray-800 dark:text-gray-100">
+                    {language === 'ar' ? 'الامتثال للأطر والمعايير' : 'Frameworks Compliance'}
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <FrameworkMeter 
                         title="NCA ECC" 

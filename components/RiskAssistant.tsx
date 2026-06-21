@@ -352,7 +352,7 @@ export const RiskAssistant: React.FC<RiskAssistantProps> = ({ isOpen, onClose, r
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl flex flex-col" style={{height: '85vh', maxHeight: '800px'}}>
                  <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-teal-50 dark:bg-teal-900/20">
                      <div className="flex items-center">
-                        <img src={rashidAvatar} alt="Rashid AI" className="w-12 h-12 rounded-full mr-3 border-2 border-teal-600 shadow-sm" />
+                        <img src={rashidAvatar} alt="Rashid AI" className="w-8 h-8 rounded-full mr-3 border-2 border-teal-600 shadow-sm" />
                         <div>
                             <h2 className="font-normal text-lg text-gray-800 dark:text-gray-100">Rashid AI</h2>
                             <p className="text-xs text-teal-600 dark:text-teal-400 font-normal">Enterprise Risk Manager • ISO 31000</p>

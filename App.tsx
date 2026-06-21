@@ -654,7 +654,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className={`flex h-screen bg-slate-100 dark:bg-transparent text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 ${theme}`}>
+      <div className={`flex h-screen bg-slate-100 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 ${theme}`}>
       <Sidebar 
         domains={eccData} 
         selectedDomain={selectedDomain} 
@@ -665,6 +665,7 @@ export default function App() {
         trainingProgress={trainingProgress}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        language={language}
       />
       
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
@@ -709,6 +710,18 @@ export default function App() {
                 </div>
                 
                 <div className="flex items-center gap-3">
+                    {/* Language Switcher */}
+                    <button 
+                        onClick={() => setLanguage(l => l === 'en' ? 'ar' : 'en')}
+                        className="px-3 py-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex items-center gap-1"
+                        title={translations[language].select_lang}
+                    >
+                        <svg className="w-3.5 h-3.5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 11.37 7.361 16.5 3 19h18"></path>
+                        </svg>
+                        <span>{language === 'en' ? 'العربية' : 'English'}</span>
+                    </button>
+
                     <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                         {theme === 'light' ? 
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg> : 
@@ -718,7 +731,7 @@ export default function App() {
                     {!isOnline ? (
                         <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 shadow-sm shadow-amber-500/10">
                             <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
-                            <span className="text-[9px] font-bold uppercase tracking-wider">Edge-AI Optimized fallback active</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].edge_ai_active}</span>
                         </div>
                     ) : (
                         <div className="flex items-center gap-2 px-3 py-1 bg-teal-500/10 border border-teal-500/20 rounded-full text-teal-400 shadow-sm shadow-teal-500/10">
@@ -727,14 +740,14 @@ export default function App() {
                                 <div className="w-1 h-1 bg-teal-400 rounded-full animate-bounce"></div>
                                 <div className="w-1 h-1 bg-teal-400 rounded-full"></div>
                             </div>
-                            <span className="text-[9px] font-bold uppercase tracking-wider">Neural-Link: Cloud Verified</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].neural_link}</span>
                         </div>
                     )}
                     <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        <span className="text-[9px] font-bold uppercase tracking-wider">Local LLM: Ready</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].local_llm_ready}</span>
                     </div>
-                    <button onClick={handleLogout} className="text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-red-400 transition-colors ml-2">Secure Terminate</button>
+                    <button onClick={handleLogout} className="text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-red-400 transition-colors ml-2">{translations[language].secured_terminate}</button>
                 </div>
             </div>
         </header>
@@ -760,6 +773,7 @@ export default function App() {
                             tasks={tasks}
                             setTasks={setTasks}
                             risks={risks}
+                            language={language}
                         />
                     )}
             {currentView === 'navigator' && (
@@ -1030,6 +1044,7 @@ export default function App() {
                             onAddAuditLog={handleAddAuditLog}
                             auditLog={auditLog}
                             language={language}
+                            companyProfile={company}
                         />
                     )}
                 </div>

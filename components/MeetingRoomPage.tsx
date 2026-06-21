@@ -129,7 +129,7 @@ export const MeetingRoomPage: React.FC = () => {
                                             
                                             {/* Sitting indicator Circle */}
                                             <div className={`relative p-1 rounded-full border-2 transition-all duration-500 ${isCurrentSpeaker ? 'border-teal-500 scale-110 shadow-lg shadow-teal-500/20' : 'border-transparent'}`}>
-                                                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white dark:border-gray-800 bg-gray-200 shadow-md">
+                                                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white dark:border-gray-800 bg-gray-200 shadow-md">
                                                     <img src={participant.avatarUrl} alt={participant.name} className="w-full h-full object-cover" />
                                                 </div>
                                                 {isCurrentSpeaker && (
