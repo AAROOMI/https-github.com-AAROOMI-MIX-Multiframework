@@ -5,15 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAN06U9qAvTxdei4C9SnjkmqsQtS1ZGceE",
-  authDomain: "database-32b11.firebaseapp.com",
-  projectId: "database-32b11",
-  storageBucket: "database-32b11.firebasestorage.app",
-  messagingSenderId: "789494158274",
-  appId: "1:789494158274:web:cac7d00fe85bf5e0013c5b",
-  measurementId: "G-YHJ9CP0SSV"
-};
+import firebaseConfig from './firebase-applet-config.json';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

@@ -19,11 +19,31 @@ interface ComplianceAgentPageProps {
 }
 
 export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunAnalysis, onGenerateDocuments, agentLog, permissions, assessments }) => {
-    const [activeTab, setActiveTab] = useState<'text' | 'vision' | 'orchestrator' | 'performance'>('orchestrator');
+    const [activeTab, setActiveTab] = useState<'text' | 'vision' | 'orchestrator' | 'performance' | 'solaceMesh'>('orchestrator');
     const [gaps, setGaps] = useState<ComplianceGap[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     
+    // Solace Agent Mesh State
+    const [solaceTopic, setSolaceTopic] = useState('solace/grc/vapt/vulnerability-found');
+    const [solacePayload, setSolacePayload] = useState(JSON.stringify({ 
+      severity: "CRITICAL", 
+      component: "Core DB Server", 
+      details: "SLA-084 unpatched symmetric key lifecycle vulnerability",
+      remediationRequired: true
+    }, null, 2));
+    
+    const [solaceLogs, setSolaceLogs] = useState<any[]>([
+      { id: '1', timestamp: '01:40:12', topic: 'solace/grc/system/ingress', sender: 'Ingress Gate', message: 'Solace Event Broker initialized successfully & 9 GRC core agents auto-connected.', type: 'info' },
+      { id: '2', timestamp: '01:40:15', topic: 'solace/grc/policy/draft', sender: 'Yousef AI', message: 'Published Annex A control policy outline under topic solace/grc/policy/draft.', type: 'publish' },
+      { id: '3', timestamp: '01:40:16', topic: 'solace/grc/policy/draft', sender: 'Asaad AI', message: 'Matched subscriber: Asaad AI (sub: solace/grc/policy/>) - Audited PDPL mapping.', type: 'consume' }
+    ]);
+    const [isPublishingEvent, setIsPublishingEvent] = useState(false);
+    const [isScenarioRunning, setIsScenarioRunning] = useState(false);
+    const [activeScenarioStep, setActiveScenarioStep] = useState<number>(-1);
+    const [activeScenarioName, setActiveScenarioName] = useState<string>('');
+    const [showSourcedCode, setShowSourcedCode] = useState(false);
+
     // Orchestrator State
     const [orchestratorQuery, setOrchestratorQuery] = useState('');
     const [orchestratorResult, setOrchestratorResult] = useState<any>(null);
@@ -128,6 +148,16 @@ export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunA
                     >
                         <ActivityIcon className="w-4 h-4 text-teal-500" />
                         Agent Performance Report
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('solaceMesh')}
+                        className={`whitespace-nowrap py-4 px-1 border-b-2 font-normal text-sm flex items-center gap-2 ${activeTab === 'solaceMesh' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                    >
+                        <span className="flex h-2 w-2 relative">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                        Solace Agent Mesh
                     </button>
                 </nav>
             </div>
@@ -599,6 +629,403 @@ export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunA
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'solaceMesh' && (
+                <div className="space-y-6 animate-fade-in text-gray-800 dark:text-gray-100">
+                    <div className="bg-gradient-to-r from-teal-900 to-slate-905 text-white rounded-2xl p-6 border border-teal-500/30">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="bg-amber-500/20 text-amber-300 text-[10px] font-mono border border-amber-500/30 uppercase tracking-widest px-2.5 py-1 rounded">
+                                        SOLACE SYSTEM INTEGRATION
+                                    </span>
+                                </div>
+                                <h2 className="text-xl font-normal tracking-tight pt-1">Event-Driven GRC Multi-Agent Mesh Broker</h2>
+                                <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
+                                    Autonomous GRC agents communicate asynchronously using pub/sub events via topics routed through our real-time simulated <strong>Solace Event Broker</strong>. This architectural model overrides static orchestration with fully dynamic, event-driven multi-step choreographies.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowSourcedCode(!showSourcedCode)}
+                                className="bg-slate-850 hover:bg-slate-800 text-teal-300 border border-teal-500/20 text-xs font-normal px-4.5 py-2.5 rounded-xl transition-all font-mono"
+                            >
+                                {showSourcedCode ? 'Hide Embedded SDK Code' : 'Inspect Solace SDK Client'}
+                            </button>
+                        </div>
+
+                        {showSourcedCode && (
+                            <div className="mt-4 p-4 bg-slate-950 text-slate-200 font-mono text-[11px] rounded-lg border border-teal-500/20 max-h-80 overflow-y-auto leading-relaxed">
+                                <p className="text-teal-400 font-semibold mb-2">// Embedded Solace-Agent-Mesh Client Class - Integrated in all GRC AI Agents</p>
+                                <pre>{`class SolaceAgentGateway {
+    private solaceBrokerUrl = "smf://solace.platform.internal:55443";
+    
+    constructor(
+        private agentId: string, 
+        private agentRole: string,
+        private subscriptions: string[] = []
+    ) {
+        this.initializeClient();
+    }
+
+    private initializeClient() {
+        console.log(\`[Solace Native SDK] Agent \${this.agentId} connected to \${this.solaceBrokerUrl}\`);
+        this.subscriptions.forEach(topic => this.subscribe(topic));
+    }
+
+    /**
+     * Publish function: Emits a GRC event into the message broker
+     */
+    public async publish(topic: string, payload: any, correlationId?: string): Promise<void> {
+        const message = {
+            messageId: "msg-" + Math.random().toString(36).substr(2, 9),
+            correlationId: correlationId || null,
+            sender: this.agentId,
+            timestamp: Date.now(),
+            topic: topic,
+            payload: payload
+        };
+        // Simulated Event Broker Ingress Gating
+        solaceEventBus.routeEvent(topic, message);
+    }
+
+    /**
+     * Subscribe function: Binds subscription wildcard filter on the broker queue
+     */
+    public subscribe(topicPattern: string): void {
+        console.log(\`[Solace DB Bind] Agent \${this.agentId} registered subscription queue matching: \${topicPattern}\`);
+        solaceEventBus.registerQueue(this.agentId, topicPattern, this.onMessage.bind(this));
+    }
+
+    /**
+     * Autonomous Callback Triggered upon Topic Match
+     */
+    public async onMessage(topic: string, eventPayload: any): Promise<void> {
+        console.log(\`[Solace Consumer] Agent \${this.agentId} [Role: \${this.agentRole}] received event on topic: \${topic}\`);
+        // Match specific cybersecurity sovereign cognitive capsule capabilities to perform reasoning
+        await this.handleAutonomousReasoning(topic, eventPayload);
+    }
+}`}</pre>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Active subscribers and status panels */}
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        
+                        {/* Subscriptions Registry List */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 lg:col-span-1 space-y-4 shadow-sm">
+                            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center justify-between">
+                                <span>Agent Subscriptions</span>
+                                <span className="bg-teal-500/10 text-teal-600 dark:text-teal-400 font-mono text-[9px] px-2 py-0.5 rounded">
+                                    9 Clients
+                                </span>
+                            </h3>
+
+                            <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                                {Object.entries({
+                                    'Ahmed AI': { role: 'CISO', status: 'Online', subs: ['solace/grc/vapt/>', 'solace/grc/alert/>', 'solace/grc/consensus/decide'] },
+                                    'Fahad AI': { role: 'CTO', status: 'Online', subs: ['solace/grc/vapt/>', 'solace/grc/infrastructure/vulnerability'] },
+                                    'Mohammed AI': { role: 'CIO', status: 'Online', subs: ['solace/grc/infrastructure/>', 'solace/grc/policy/draft'] },
+                                    'Hoda AI': { role: 'DPO', status: 'Online', subs: ['solace/grc/pdpl/>', 'solace/grc/privacy/>'] },
+                                    'Majed AI': { role: 'BCM', status: 'Online', subs: ['solace/grc/continuity/>', 'solace/grc/bcm/incident'] },
+                                    'Asaad AI': { role: 'Compliance', status: 'Online', subs: ['solace/grc/regulatory/>', 'solace/grc/compliance/gap'] },
+                                    'Abdullah AI': { role: 'Auditor', status: 'Online', subs: ['solace/grc/audit/>', 'solace/grc/evidence/uploaded'] },
+                                    'Khalid AI': { role: 'Code Reviewer', status: 'Idle', subs: ['solace/grc/vapt/code'] },
+                                    'Sultan AI': { role: 'NIST Expert', status: 'Online', subs: ['solace/grc/nist/>'] }
+                                }).map(([name, data]) => (
+                                    <div key={name} className="p-3 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-800 flex flex-col gap-1.5">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="text-xs font-semibold text-gray-900 dark:text-white leading-tight">{name}</p>
+                                                <p className="text-[10px] text-teal-600 dark:text-teal-400 font-mono">{data.role}</p>
+                                            </div>
+                                            <span className="flex items-center gap-1">
+                                                <span className={`w-1.5 h-1.5 rounded-full ${data.status === 'Online' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                                                <span className="text-[9px] text-gray-400 uppercase font-mono">{data.status}</span>
+                                            </span>
+                                        </div>
+                                        <div className="space-y-0.5 border-t border-gray-200/50 dark:border-gray-700/50 pt-1.5">
+                                            <p className="text-[8px] uppercase tracking-wider text-gray-400 font-bold">Topic Subscriptions:</p>
+                                            {data.subs.map(sub => (
+                                                <div key={sub} className="text-[9px] font-mono text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 px-1 py-0.5 rounded truncate border border-gray-100 dark:border-gray-800">
+                                                    {sub}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Interactive Main Broker Panel */}
+                        <div className="lg:col-span-3 space-y-6 flex flex-col justify-between">
+                            
+                            {/* Orchestrated Simulation Scenarios */}
+                            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                                <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                    Asynchronous Event-Storm Triggers
+                                </h3>
+                                <p className="text-xs text-gray-500 leading-relaxed">
+                                    Trigger real-time scenarios showing multi-step event propagation. Matches are evaluated instantly against Solace routing standards.
+                                </p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-4 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 rounded-xl cursor-pointer transition-all space-y-2 flex flex-col justify-between"
+                                         onClick={() => {
+                                            if (isScenarioRunning) return;
+                                            setIsScenarioRunning(true);
+                                            setActiveScenarioName('Scenario 1: Critical Ransomware Incident');
+                                            
+                                            const newLogs = [...solaceLogs];
+                                            const timestamp = () => new Date().toLocaleTimeString();
+                                            
+                                            // Step 1
+                                            newLogs.push({ id: Date.now() + '1', timestamp: timestamp(), topic: 'solace/grc/vapt/vulnerability-found', sender: 'Bandar AI (CSO)', message: '⚠️ Live attack reported: Rogue service injecting unpatched TLS keys.', type: 'publish' });
+                                            setSolaceLogs([...newLogs]);
+                                            
+                                            // Step 2
+                                            setTimeout(() => {
+                                                newLogs.push({ id: Date.now() + '2', timestamp: timestamp(), topic: 'solace/grc/vapt/vulnerability-found', sender: 'Fahad AI (CTO)', message: '✅ Matched subscription "solace/grc/vapt/>". Isolating database subnets immediately & publishing solace/grc/vapt/isolate-remediation.', type: 'consume' });
+                                                setSolaceLogs([...newLogs]);
+                                            }, 1200);
+
+                                            // Step 3
+                                            setTimeout(() => {
+                                                newLogs.push({ id: Date.now() + '3', timestamp: timestamp(), topic: 'solace/grc/vapt/vulnerability-found', sender: 'Ahmed AI (CISO)', message: '🚨 Incident logged under tracker #INC-2026. Elevating hazard level to CRITICAL. Emitting event solace/grc/alert/critical.', type: 'publish' });
+                                                setSolaceLogs([...newLogs]);
+                                            }, 2400);
+
+                                            // Step 4
+                                            setTimeout(() => {
+                                                newLogs.push({ id: Date.now() + '4', timestamp: timestamp(), topic: 'solace/grc/alert/critical', sender: 'Majed AI (BCM)', message: '🔄 Matched subscription "solace/grc/continuity/>". Activating BCM Disaster DR runbook plans, notifying CEO [Sovereign Skill CS-123 mapped].', type: 'consume' });
+                                                newLogs.push({ id: Date.now() + '5', timestamp: timestamp(), topic: 'solace/grc/system/ingress', sender: 'Solace Broker', message: '🎉 Scenario 1 completed. 5 GRC events successfully routed asynchronously.', type: 'info' });
+                                                setSolaceLogs([...newLogs]);
+                                                setIsScenarioRunning(false);
+                                            }, 3600);
+                                         }}
+                                    >
+                                        <div>
+                                            <h4 className="font-semibold text-xs text-emerald-800 dark:text-emerald-400">1. Ransomware Threat Mitigation Loop</h4>
+                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mt-1">
+                                                Bandar AI discovers a vulnerability &rarr; Fahad isolated &rarr; Ahmed upgrades &rarr; Majed activates Business Continuity runbook.
+                                            </p>
+                                        </div>
+                                        <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-normal uppercase tracking-tight mt-2 flex items-center gap-1">
+                                            ⚡ Trigger Incident Loop
+                                        </span>
+                                    </div>
+
+                                    <div className="p-4 bg-purple-500/10 hover:bg-purple-500/15 border border-purple-500/30 rounded-xl cursor-pointer transition-all space-y-2 flex flex-col justify-between"
+                                         onClick={() => {
+                                            if (isScenarioRunning) return;
+                                            setIsScenarioRunning(true);
+                                            setActiveScenarioName('Scenario 2: PDPL Compliance Auditing');
+                                            
+                                            const newLogs = [...solaceLogs];
+                                            const timestamp = () => new Date().toLocaleTimeString();
+                                            
+                                            newLogs.push({ id: Date.now() + '1', timestamp: timestamp(), topic: 'solace/grc/privacy/dsar-received', sender: 'System Ingress', message: '📥 Data Subject Access Request (DSAR) received for user encryption tokens.', type: 'publish' });
+                                            setSolaceLogs([...newLogs]);
+                                            
+                                            setTimeout(() => {
+                                                newLogs.push({ id: Date.now() + '2', timestamp: timestamp(), topic: 'solace/grc/privacy/dsar-received', sender: 'Hoda AI (DPO)', message: '✅ Matched subscription "solace/grc/privacy/>". Running personal data classification checklist and publishing solace/grc/pdpl/masking-required.', type: 'consume' });
+                                                setSolaceLogs([...newLogs]);
+                                            }, 1200);
+
+                                            setTimeout(() => {
+                                                newLogs.push({ id: Date.now() + '3', timestamp: timestamp(), topic: 'solace/grc/pdpl/masking-required', sender: 'Mohammed AI (CIO)', message: '⚡ Enforcing DB pseudonymization metrics on Core Storage. Masking active, publishing solace/grc/infrastructure/completed.', type: 'publish' });
+                                                setSolaceLogs([...newLogs]);
+                                            }, 2400);
+
+                                            setTimeout(() => {
+                                                newLogs.push({ id: Date.now() + '4', timestamp: timestamp(), topic: 'solace/grc/infrastructure/completed', sender: 'Asaad AI (Compliance)', message: '⚖️ Matched compliance scope. Logging control confirmation of PDPL audit records to ledger.', type: 'consume' });
+                                                newLogs.push({ id: Date.now() + '5', timestamp: timestamp(), topic: 'solace/grc/system/ingress', sender: 'Solace Broker', message: '🎉 Scenario 2 completed. 4 GRC events successfully processed.', type: 'info' });
+                                                setSolaceLogs([...newLogs]);
+                                                setIsScenarioRunning(false);
+                                            }, 3600);
+                                         }}
+                                    >
+                                        <div>
+                                            <h4 className="font-semibold text-xs text-purple-800 dark:text-purple-400">2. Saudi PDPL Data Privacy Process</h4>
+                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mt-1">
+                                                Ingress fires DSAR request &rarr; Hoda DPO initiates data scan &rarr; Mohammed masks token &rarr; Asaad archives evidence log.
+                                            </p>
+                                        </div>
+                                        <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-normal uppercase tracking-tight mt-2 flex items-center gap-1">
+                                            ⚡ Trigger PDPL Loop
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Interactive Event publisher */}
+                            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                                <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                                    Interactive Custom Event Publisher
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="md:col-span-1 space-y-3">
+                                        <div>
+                                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Publish Topic String</label>
+                                            <input
+                                                type="text"
+                                                value={solaceTopic}
+                                                onChange={(e) => setSolaceTopic(e.target.value)}
+                                                className="mt-1 w-full text-xs p-2.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 font-mono"
+                                            />
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] text-gray-400 italic">
+                                                Try topics e.g. <code>solace/grc/vapt/leak</code>, <code>solace/grc/privacy/alert</code> to test wildcards matching like <code>&gt;</code> and <code>*</code>
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                const timestampList = () => new Date().toLocaleTimeString();
+                                                const matchSolaceWildcard = (subscription: string, published: string): boolean => {
+                                                    const subParts = subscription.split('/');
+                                                    const pubParts = published.split('/');
+                                                    for (let i = 0; i < subParts.length; i++) {
+                                                        const subPart = subParts[i];
+                                                        if (subPart === '>') return true;
+                                                        if (subPart === '*') {
+                                                            if (i >= pubParts.length) return false;
+                                                            continue;
+                                                        }
+                                                        if (pubParts[i] !== subPart) return false;
+                                                    }
+                                                    return subParts.length === pubParts.length;
+                                                };
+
+                                                const subscribersMap: Record<string, string[]> = {
+                                                    'Ahmed AI (CISO)': ['solace/grc/vapt/>', 'solace/grc/alert/>', 'solace/grc/consensus/decide'],
+                                                    'Fahad AI (CTO)': ['solace/grc/vapt/>', 'solace/grc/infrastructure/vulnerability'],
+                                                    'Mohammed AI (CIO)': ['solace/grc/infrastructure/>', 'solace/grc/policy/draft'],
+                                                    'Hoda AI (DPO)': ['solace/grc/pdpl/>', 'solace/grc/privacy/>'],
+                                                    'Majed AI (BCM)': ['solace/grc/continuity/>', 'solace/grc/bcm/incident'],
+                                                    'Asaad AI (Compliance)': ['solace/grc/regulatory/>', 'solace/grc/compliance/gap'],
+                                                    'Abdullah AI (Auditor)': ['solace/grc/audit/>', 'solace/grc/evidence/uploaded'],
+                                                    'Khalid AI (Code Reviewer)': ['solace/grc/vapt/code'],
+                                                    'Sultan AI (NIST Expert)': ['solace/grc/nist/>']
+                                                };
+
+                                                const matchedAgents: string[] = [];
+                                                Object.entries(subscribersMap).forEach(([agent, subs]) => {
+                                                    const hasMatch = subs.some(sub => matchSolaceWildcard(sub, solaceTopic));
+                                                    if (hasMatch) matchedAgents.push(agent);
+                                                });
+
+                                                const messageId = 'msg-' + Math.random().toString(36).substr(2, 5);
+                                                const publishLog = {
+                                                    id: Date.now().toString(),
+                                                    timestamp: timestampList(),
+                                                    topic: solaceTopic,
+                                                    sender: 'System Publisher',
+                                                    message: `📤 Published custom event [Id: ${messageId}] to Solace message broker!`,
+                                                    type: 'publish'
+                                                };
+
+                                                const nextLogs = [...solaceLogs, publishLog];
+
+                                                if (matchedAgents.length === 0) {
+                                                    nextLogs.push({
+                                                        id: Date.now().toString() + 'no',
+                                                        timestamp: timestampList(),
+                                                        topic: solaceTopic,
+                                                        sender: 'Solace Broker',
+                                                        message: '⚠️ Message published but has no matching subscribers. Unmatched topic message dropped.',
+                                                        type: 'info'
+                                                    });
+                                                } else {
+                                                    matchedAgents.forEach((agent, i) => {
+                                                        const agentQuotes: Record<string, string> = {
+                                                            'Ahmed AI (CISO)': 'Evaluating core security metrics relative to risk score metrics.',
+                                                            'Fahad AI (CTO)': 'Updating isolated host assets, inspecting certificate parameters.',
+                                                            'Mohammed AI (CIO)': 'Auditing database storage tokenization alignments.',
+                                                            'Hoda AI (DPO)': 'Executing PDPL audit impact assessments to verify data storage.',
+                                                            'Majed AI (BCM)': 'Mapping metrics directly to ISO 22301 standard limits.',
+                                                            'Asaad AI (Compliance)': 'Verifying regulatory compliance thresholds.',
+                                                            'Abdullah AI (Auditor)': 'Validating quantitative ledger hashes and proof checks.',
+                                                            'Khalid AI (Code Reviewer)': 'Analyzing security vulnerabilities in repository pipeline code.',
+                                                            'Sultan AI (NIST Expert)': 'Checking NIST SP 800-53 threat vectors.'
+                                                        };
+                                                        const phrase = agentQuotes[agent] || 'Initiating autonomous action loop.';
+                                                        nextLogs.push({
+                                                            id: Date.now().toString() + 'match' + i,
+                                                            timestamp: timestampList(),
+                                                            topic: solaceTopic,
+                                                            sender: agent,
+                                                            message: `✅ Subscription Matched! Executing: "${phrase}"`,
+                                                            type: 'consume'
+                                                        });
+                                                    });
+                                                }
+
+                                                setSolaceLogs(nextLogs);
+                                            }}
+                                            className="w-full text-center py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded font-normal text-xs transition-all uppercase tracking-tight"
+                                        >
+                                            Publish Live Event
+                                        </button>
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Payload Document Body (JSON)</label>
+                                        <textarea
+                                            value={solacePayload}
+                                            onChange={(e) => setSolacePayload(e.target.value)}
+                                            rows={5}
+                                            className="mt-1 w-full text-xs p-2.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 font-mono"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Live Terminal outputs */}
+                            <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm flex-1 flex flex-col justify-between">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                                        <span>Solace Live Message Broker Console</span>
+                                    </h3>
+                                    <button
+                                        onClick={() => setSolaceLogs([])}
+                                        className="text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-white underline"
+                                    >
+                                        Clear Broker Output Log
+                                    </button>
+                                </div>
+
+                                <div className="bg-gray-950 dark:bg-slate-900 text-slate-100 font-mono text-[11px] p-4 rounded-lg overflow-y-auto max-h-60 flex-1 space-y-2.5 leading-relaxed shadow-inner border border-slate-900">
+                                    {solaceLogs.length > 0 ? (
+                                        solaceLogs.map((log) => (
+                                            <div key={log.id} className="flex gap-2">
+                                                <span className="text-gray-600 text-[10px] select-none flex-shrink-0">{log.timestamp}</span>
+                                                <div className="min-w-0">
+                                                    <span className={`text-[10px] font-bold uppercase ${
+                                                        log.type === 'publish' ? 'text-amber-500' :
+                                                        log.type === 'consume' ? 'text-teal-400' : 'text-cyan-400'
+                                                    } mr-2`}>
+                                                        [{log.sender}]
+                                                    </span>
+                                                    <span className="text-gray-500 text-[10px] mr-2">Topic: {log.topic}</span>
+                                                    <p className="mt-0.5 text-slate-200 whitespace-pre-wrap">{log.message}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-500 italic">No events published. Use scenarions or publish a custom topic message to spin up the broker.</p>
+                                    )}
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>

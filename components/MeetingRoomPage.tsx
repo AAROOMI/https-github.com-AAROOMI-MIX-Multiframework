@@ -32,6 +32,8 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
     const [isProcessingHumanInput, setIsProcessingHumanInput] = useState(false);
     const [humanTranscript, setHumanTranscript] = useState('');
     const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+    const [selectedLanguage, setSelectedLanguage] = useState<'en-US' | 'ar-SA' | 'ur-PK'>('en-US');
+    const [typedMessage, setTypedMessage] = useState('');
 
     const recognitionRef = useRef<any>(null);
 
@@ -82,7 +84,7 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
             const rec = new SpeechRecognition();
             rec.continuous = false;
             rec.interimResults = false;
-            rec.lang = 'en-US';
+            rec.lang = selectedLanguage;
 
             rec.onstart = () => {
                 setIsListening(true);
@@ -107,7 +109,7 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
 
             recognitionRef.current = rec;
         }
-    }, [participants]);
+    }, [participants, selectedLanguage]);
 
     // Automated Virtual Speaker loop
     useEffect(() => {
@@ -145,7 +147,7 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
         return () => clearInterval(interval);
     }, [isMeetingActive, participants, isListening, isProcessingHumanInput]);
 
-    // Speak to GRC Board with mic
+    // Speak to GRC Board with mic or text input
     const handleSpeakToBoard = async (text: string) => {
         if (!text || text.trim() === '' || text === 'Listening...') return;
         setIsProcessingHumanInput(true);
@@ -156,21 +158,31 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
 
         try {
             const bots = participants.filter(p => !p.isHuman);
+            const userLangName = selectedLanguage === 'ur-PK' ? 'Urdu' : selectedLanguage === 'ar-SA' ? 'Arabic' : 'English';
+            
             const prompt = `
                 You are simulating a GRC (Governance, Risk, and Compliance) executive board meeting.
-                The user just spoke into their microphone saying this:
+                The user just addressed the board or asked a question in ${userLangName}.
+                The user statement/question:
                 "${text}"
 
                 The virtual board members present are:
                 ${bots.map(b => `- ${b.name} (${b.role})`).join('\n')}
 
                 Please select ONE suitable board member to respond directly and constructively to the user's statement or question.
+
+                IMPORTANT LANGUAGE CONSTRAINT:
+                1. If the user spoke, typed or has a selected language of Arabic, you MUST write the 'response' entirely in natural Arabic (AR).
+                2. If the user spoke, typed or has a selected language of Urdu, you MUST write the 'response' entirely in natural, native Urdu (UR) script.
+                3. If the user spoke, typed or has a selected language of English, you MUST write the 'response' entirely in English (EN).
+                Strictly match the language of the user's input/selected language (${userLangName}). No translations or explanations in other languages should be included.
+
                 Provide your response as a JSON object:
                 {
                     "responderId": "Id of the board member replying (e.g. from the present list)",
                     "responderName": "Name of the board member replying",
                     "responderRole": "Role of the board member",
-                    "response": "A professional, realistic 2-sentence response addressing the user's issue with executive gravity."
+                    "response": "A professional, realistic 2-sentence response addressing the user's issue with executive gravity in the matched language."
                 }
             `;
 
@@ -186,16 +198,40 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
                 response: 'string'
             });
 
-            if (data && data.responderId) {
-                const matchedBot = bots.find(b => b.id === data.responderId || b.name === data.responderName) || bots[0];
+            if (data && (data.responderId || data.responderName || data.response)) {
+                const searchId = (data.responderId || '').toLowerCase();
+                const searchName = (data.responderName || '').toLowerCase();
+                const searchRole = (data.responderRole || '').toLowerCase();
+                
+                const matchedBot = bots.find(b => 
+                    b.id.toLowerCase() === searchId || 
+                    b.id.toLowerCase().includes(searchId) || 
+                    b.name.toLowerCase() === searchName || 
+                    b.name.toLowerCase().includes(searchName) ||
+                    b.role.toLowerCase() === searchRole ||
+                    b.role.toLowerCase().includes(searchRole)
+                ) || bots[0];
+                
+                const responseText = data.response && data.response !== "Content generation failed." 
+                    ? data.response 
+                    : (selectedLanguage === 'ur-PK' 
+                        ? `میں نے آپ کا نقطہ نظر سمجھ لیا ہے۔ بطور ${matchedBot.role}، میں اس معاملے پر گہرائی سے کام کروں گا۔`
+                        : selectedLanguage === 'ar-SA'
+                        ? `لقد فهمت وجهة نظرك تمامًا. بصفتي ${matchedBot.role}، سأعمل على هذه المسألة بدقة.`
+                        : `I understand your point completely. As ${matchedBot.role}, I will address this matter with high priority.`);
+
                 setActiveSpeakerId(matchedBot.id);
-                setMeetingMinutes(prev => [`${matchedBot.name} (${matchedBot.role}): "${data.response}"`, ...prev].slice(0, 15));
-                await speakVoice(data.response, matchedBot.role);
+                setMeetingMinutes(prev => [`${matchedBot.name} (${matchedBot.role}): "${responseText}"`, ...prev].slice(0, 15));
+                await speakVoice(responseText, matchedBot.role);
             } else {
                 // Fallback
                 const bot = bots[0];
                 setActiveSpeakerId(bot.id);
-                const msg = "We have received your input, and will integrate this into our upcoming risk evaluations.";
+                const msg = selectedLanguage === 'ur-PK' 
+                    ? "ہم نے آپ کی بات نوٹ کر لی ہے اور اسے اپنے آئندہ خطرات کے جائزے میں شامل کریں گے۔"
+                    : selectedLanguage === 'ar-SA'
+                    ? "لقد استلمنا مداخلتك وسندمجها في تقييمات المخاطر القادمة لدينا."
+                    : "We have received your input, and will integrate this into our upcoming risk evaluations.";
                 setMeetingMinutes(prev => [`${bot.name} (${bot.role}): "${msg}"`, ...prev].slice(0, 15));
                 await speakVoice(msg, bot.role);
             }
@@ -221,43 +257,96 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
             const utterance = new SpeechSynthesisUtterance(text);
             const voicesList = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
 
-            const getBestMaleVoice = () => {
-                const keywords = [
-                    'google us english male',
-                    'natural male',
-                    'premium male',
-                    'guy',
-                    'david',
-                    'mark',
-                    'george',
-                    'richard',
-                    'andrew',
-                    'microsoft david'
-                ];
-                for (const keyword of keywords) {
-                    const voice = voicesList.find(v => v.name.toLowerCase().includes(keyword) && v.lang.toLowerCase().startsWith('en'));
-                    if (voice) return voice;
+            // Detect language of the text
+            const isArabicText = /[\u0600-\u06FF]/.test(text);
+            let langPattern = 'en';
+            if (isArabicText) {
+                if (selectedLanguage === 'ur-PK') {
+                    langPattern = 'ur';
+                } else {
+                    langPattern = 'ar';
                 }
-                const fallbackMale = voicesList.find(v => v.name.toLowerCase().includes('male') && v.lang.toLowerCase().startsWith('en'));
-                return fallbackMale || voicesList.find(v => v.lang.toLowerCase().startsWith('en'));
+            } else if (selectedLanguage === 'ur-PK') {
+                langPattern = 'ur';
+            } else if (selectedLanguage === 'ar-SA') {
+                langPattern = 'ar';
+            }
+
+            const matchingVoices = voicesList.filter(v => 
+                v.lang.toLowerCase().startsWith(langPattern) || 
+                v.lang.toLowerCase().includes(langPattern + '-')
+            );
+
+            // Female gender check (DPO - Hoda AI)
+            const isFemale = role.toLowerCase() === 'dpo' || role.toLowerCase().includes('data protection officer');
+
+            const scoreVoice = (voice: SpeechSynthesisVoice) => {
+                let score = 0;
+                const name = voice.name.toLowerCase();
+                
+                // Boost premium, high-quality, neural, or natural voices
+                if (name.includes('natural') || name.includes('neural') || name.includes('premium') || name.includes('siri') || name.includes('enhanced') || name.includes('wavenet') || name.includes('high') || name.includes('quality') || name.includes('hd')) {
+                    score += 50;
+                }
+                
+                if (name.includes('google') || name.includes('microsoft') || name.includes('apple') || name.includes('desktop')) {
+                    score += 15;
+                }
+                
+                // Gender Match
+                if (isFemale) {
+                    if (name.includes('female') || name.includes('zira') || name.includes('hazel') || name.includes('susan') || name.includes('siri') || name.includes('samantha') || name.includes('mary') || name.includes('kore') || name.includes('heera') || name.includes('muna') || name.includes('hoda') || name.includes('laila') || name.includes('zeina') || name.includes('nadia') || name.includes('salma') || name.includes('asma') || name.includes('uzma') || name.includes('zoya') || name.includes('aisha')) {
+                        score += 30;
+                    }
+                    if (name.includes('male') || name.includes('david') || name.includes('guy') || name.includes('stefan') || name.includes('george') || name.includes('mark') || name.includes('puck') || name.includes('charon')) {
+                        score -= 30;
+                    }
+                } else {
+                    if (name.includes('male') || name.includes('david') || name.includes('george') || name.includes('guy') || name.includes('mark') || name.includes('puck') || name.includes('charon') || name.includes('stefan') || name.includes('tarif') || name.includes('shakir') || name.includes('riyad') || name.includes('hassan') || name.includes('omar') || name.includes('imran') || name.includes('bilal') || name.includes('sajid')) {
+                        score += 30;
+                    }
+                    if (name.includes('female') || name.includes('zira') || name.includes('samantha') || name.includes('hazel') || name.includes('siri') || name.includes('muna') || name.includes('hoda')) {
+                        score -= 30;
+                    }
+                }
+                
+                return score;
             };
 
-            const selectedVoice = getBestMaleVoice();
+            const sortedVoices = [...matchingVoices].sort((a, b) => scoreVoice(b) - scoreVoice(a));
+            const selectedVoice = sortedVoices[0] || voicesList.find(v => v.lang.toLowerCase().startsWith(langPattern)) || voicesList.find(v => v.lang.toLowerCase().startsWith('en'));
+
             if (selectedVoice) {
                 utterance.voice = selectedVoice;
+                utterance.lang = selectedVoice.lang;
             }
 
-            // Differentiate vocal delivery based on executive role
-            switch (role) {
-                case 'CISO': utterance.pitch = 0.82; utterance.rate = 0.88; break;
-                case 'CIO': utterance.pitch = 1.0; utterance.rate = 0.92; break;
-                case 'DPO': utterance.pitch = 1.05; utterance.rate = 0.95; break;
-                case 'Auditor': utterance.pitch = 0.85; utterance.rate = 0.94; break;
-                default: utterance.pitch = 0.95; utterance.rate = 0.95;
+            // Custom natural pitch and rate settings matching individual board roles to sound human and alive!
+            switch (role.toUpperCase()) {
+                case 'CISO': utterance.pitch = 0.98; utterance.rate = 1.0; break;
+                case 'CIO': utterance.pitch = 1.02; utterance.rate = 1.02; break;
+                case 'CTO': utterance.pitch = 0.95; utterance.rate = 1.01; break;
+                case 'DPO': utterance.pitch = 1.12; utterance.rate = 0.98; break; // Hoda (Female)
+                case 'RISK MANAGER': utterance.pitch = 0.94; utterance.rate = 0.97; break;
+                case 'COMPLIANCE': utterance.pitch = 1.04; utterance.rate = 1.03; break;
+                case 'AUDITOR':
+                case 'INTERNAL AUDITOR': utterance.pitch = 0.97; utterance.rate = 1.0; break;
+                default: utterance.pitch = 1.0; utterance.rate = 1.0;
             }
 
-            utterance.onend = () => resolve();
-            utterance.onerror = () => resolve();
+            // Fallback timeout to prevent SpeechSynthesis lockups
+            const timeoutId = setTimeout(() => {
+                resolve();
+            }, 12000);
+
+            utterance.onend = () => {
+                clearTimeout(timeoutId);
+                resolve();
+            };
+            utterance.onerror = () => {
+                clearTimeout(timeoutId);
+                resolve();
+            };
             window.speechSynthesis.speak(utterance);
         });
     };
@@ -448,31 +537,74 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
                         })}
                     </div>
 
-                    {/* Speech Interaction Controls */}
-                    {isMeetingActive && isMicEnabled && (
-                        <div className="mt-6 z-20 bg-white/90 dark:bg-gray-850/90 backdrop-blur border border-gray-200 dark:border-gray-700 px-6 py-4 rounded-2xl flex flex-col items-center gap-2 max-w-md w-full shadow-lg">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={isListening ? stopListeningUser : startListeningUser}
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                                        isListening
-                                        ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-                                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                    }`}
-                                >
-                                    <MicrophoneIcon className="w-5 h-5" />
-                                </button>
-                                <div>
-                                    <p className="text-[11px] font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-                                        {isListening ? 'Boardroom Listening...' : 'Click to Speak'}
-                                    </p>
-                                    <p className="text-[9px] text-gray-500 dark:text-gray-450 uppercase">
-                                        {isListening ? 'Speak clearly into your microphone' : 'Intervene or ask board members a question'}
-                                    </p>
+                    {/* Speech & Text Interaction Controls */}
+                    {isMeetingActive && (
+                        <div className="mt-6 z-20 bg-white/95 dark:bg-gray-850/90 backdrop-blur border border-gray-200 dark:border-gray-700 px-6 py-5 rounded-2xl flex flex-col gap-4 max-w-xl w-full shadow-lg">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-3">
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={isListening ? stopListeningUser : startListeningUser}
+                                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                                            isListening
+                                            ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                        }`}
+                                    >
+                                        <MicrophoneIcon className="w-5 h-5" />
+                                    </button>
+                                    <div>
+                                        <p className="text-[11px] font-bold text-gray-900 dark:text-white uppercase tracking-wider text-left">
+                                            {isListening ? 'Boardroom Listening...' : 'Click to Speak'}
+                                        </p>
+                                        <p className="text-[9px] text-gray-500 dark:text-gray-400 uppercase text-left">
+                                            {isListening ? 'Speak clearly into your microphone' : 'Intervene using your microphone'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Language:</span>
+                                    <select
+                                        value={selectedLanguage}
+                                        onChange={(e) => setSelectedLanguage(e.target.value as any)}
+                                        className="bg-gray-50 dark:bg-gray-805 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 text-xs font-normal text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    >
+                                        <option value="en-US">🇺🇸 English</option>
+                                        <option value="ar-SA">🇸🇦 العربية</option>
+                                        <option value="ur-PK">🇵🇰 اردو</option>
+                                    </select>
                                 </div>
                             </div>
+                            
+                            {/* Text message box in case Mic is not active / permissions are missing */}
+                            <form 
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    if (typedMessage.trim() && !isProcessingHumanInput) {
+                                        handleSpeakToBoard(typedMessage);
+                                        setTypedMessage('');
+                                    }
+                                }}
+                                className="flex gap-2 w-full"
+                            >
+                                <input
+                                    type="text"
+                                    value={typedMessage}
+                                    onChange={(e) => setTypedMessage(e.target.value)}
+                                    placeholder={selectedLanguage === 'ur-PK' ? "اردو میں بورڈ سے بات کریں..." : selectedLanguage === 'ar-SA' ? "تحدث مع المجلس باللغة العربية..." : "Type a message or ask a question to the board..."}
+                                    disabled={isProcessingHumanInput}
+                                    className="flex-1 bg-gray-50 dark:bg-gray-805 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:opacity-50"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isProcessingHumanInput || !typedMessage.trim()}
+                                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold tracking-wider uppercase transition-all disabled:opacity-50"
+                                >
+                                    {isProcessingHumanInput ? 'Wait...' : 'Send'}
+                                </button>
+                            </form>
+                            
                             {humanTranscript && (
-                                <p className="text-[11px] italic text-gray-600 dark:text-gray-400 mt-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg w-full text-center border border-gray-100 dark:border-gray-800">
+                                <p className="text-[11px] italic text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg w-full text-center border border-gray-100 dark:border-gray-800">
                                     "{humanTranscript}"
                                 </p>
                             )}

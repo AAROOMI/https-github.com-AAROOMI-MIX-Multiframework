@@ -177,7 +177,7 @@ export class AgentService {
                 },
                 required: ["summary", "riskLevel", "complianceStatus", "nfa", "agentTrace", "analysis", "mom"]
             },
-            'gemini-3-flash-preview',
+            'gemini-2.5-flash',
             this.PROMPTS.ORCHESTRATOR(companyName, selectedFramework, context.prevMOM)
         );
     };

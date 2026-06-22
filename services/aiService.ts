@@ -39,7 +39,7 @@ export class AIService {
             contents.push({ text: prompt });
 
             const response = await ai.models.generateContent({
-                model: options.model || "gemini-3-flash-preview",
+                model: options.model || "gemini-2.5-flash",
                 contents: contents,
                 config: {
                     systemInstruction: options.systemInstruction
@@ -65,7 +65,7 @@ export class AIService {
         }
     }
 
-    static async generateStructuredContent<T>(prompt: string, schema: any, modelName: string = "gemini-3-flash-preview", systemInstruction?: string): Promise<T> {
+    static async generateStructuredContent<T>(prompt: string, schema: any, modelName: string = "gemini-2.5-flash", systemInstruction?: string): Promise<T> {
         console.log(`Starting structured generation with model: ${modelName}`);
         
         if (!window.navigator.onLine) {
@@ -136,7 +136,7 @@ export class AIService {
     static startChat(options: { model?: string, history?: any[], systemInstruction?: string, tools?: any[] } = {}) {
         const ai = this.getAI();
         return ai.chats.create({
-            model: options.model || "gemini-3-flash-preview",
+            model: options.model || "gemini-2.5-flash",
             config: {
                 systemInstruction: options.systemInstruction,
                 tools: options.tools
