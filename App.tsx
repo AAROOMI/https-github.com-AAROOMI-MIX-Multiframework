@@ -1028,7 +1028,7 @@ export default function App() {
                     addAuditLog={handleAddAuditLog}
                 />
             )}
-            {currentView === 'virtualMeeting' && <MeetingRoomPage />}
+            {currentView === 'virtualMeeting' && <MeetingRoomPage currentUser={currentUser} />}
             {currentView === 'whiteboard' && <MultiplayerWhiteboard />}
             {currentView === 'creatorMarketplace' && <CreatorMarketplace />}
             {currentView === 'breadcrumbDesign' && <BreadcrumbReferenceSheet />}
