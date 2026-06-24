@@ -607,44 +607,93 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
         if (languageMatchedVoices.length > 0) {
             const speakerLower = (speakerName || '').toLowerCase();
             
+            // Find the agent in our list to check gender
+            const matchedAgent = virtualAgents.find(a => 
+                speakerLower.includes(a.name.toLowerCase().split(' ')[0]) || 
+                speakerLower.includes(a.role.toLowerCase())
+            );
+            
+            const isFemale = matchedAgent?.gender === 'female' || speakerLower.includes("hoda") || speakerLower.includes("sahar");
+
+            const getBestMaleVoice = () => {
+                const preferredKeywords = [
+                    'natural male', 'premium male', 'neural male', 'google male', 'microsoft male', 'apple male', 'guy', 'david', 'mark', 'george', 'richard', 'andrew', 'microsoft david', 'google us english male', 'male', 'hamed', 'asad', 'tarif', 'shakir', 'riyad', 'hassan', 'omar', 'imran', 'bilal', 'sajid'
+                ];
+                for (const keyword of preferredKeywords) {
+                    const voice = languageMatchedVoices.find(v => v.name.toLowerCase().includes(keyword));
+                    if (voice) return voice;
+                }
+                const nonRobotic = languageMatchedVoices.find(v => !v.name.toLowerCase().includes('local') && !v.name.toLowerCase().includes('espeak'));
+                if (nonRobotic) return nonRobotic;
+
+                const anyMale = languageMatchedVoices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('guy'));
+                if (anyMale) return anyMale;
+                return languageMatchedVoices[0];
+            };
+
+            const getBestFemaleVoice = () => {
+                const preferredKeywords = [
+                    'natural female', 'premium female', 'neural female', 'google female', 'microsoft female', 'apple female', 'zira', 'hazel', 'susan', 'samantha', 'siri', 'mary', 'kore', 'heera', 'female', 'salma', 'zariyah', 'uzma', 'hoda', 'muna', 'laila', 'zeina', 'nadia', 'asma', 'zoya', 'aisha'
+                ];
+                for (const keyword of preferredKeywords) {
+                    const voice = languageMatchedVoices.find(v => v.name.toLowerCase().includes(keyword));
+                    if (voice) return voice;
+                }
+                const nonRobotic = languageMatchedVoices.find(v => !v.name.toLowerCase().includes('local') && !v.name.toLowerCase().includes('espeak'));
+                if (nonRobotic) return nonRobotic;
+
+                const anyFemale = languageMatchedVoices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('siri') || v.name.toLowerCase().includes('samantha'));
+                if (anyFemale) return anyFemale;
+                return languageMatchedVoices[0];
+            };
+
+            const preferredGenderVoice = isFemale ? getBestFemaleVoice() : getBestMaleVoice();
+            
             // Assign distinct premium voices or distinct indices relative to names to bypass robotic uniformity
             if (speakerLower.includes("ahmed")) {
                 // deep authoritative CISO
-                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("david") || v.name.toLowerCase().includes("maged")) || languageMatchedVoices[0];
+                targetVoice = preferredGenderVoice;
                 utterance.pitch = 0.82;
                 utterance.rate = 0.88;
             } else if (speakerLower.includes("fahad")) {
                 // rapid-fire CTO
-                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("google") || v.name.toLowerCase().includes("mark") || v.name.toLowerCase().includes("tarik")) || languageMatchedVoices[Math.min(1, languageMatchedVoices.length - 1)];
+                targetVoice = preferredGenderVoice;
                 utterance.pitch = 1.05;
                 utterance.rate = 1.05;
             } else if (speakerLower.includes("mohammed")) {
                 // statesman CIO
-                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("george") || v.name.toLowerCase().includes("naayf")) || languageMatchedVoices[Math.min(2, languageMatchedVoices.length - 1)];
+                targetVoice = preferredGenderVoice;
                 utterance.pitch = 0.95;
                 utterance.rate = 0.94;
             } else if (speakerLower.includes("rashid")) {
                 // Enterprise Risk Manager
-                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("premium") || v.name.toLowerCase().includes("guy") || v.name.toLowerCase().includes("tarif")) || languageMatchedVoices[Math.min(3, languageMatchedVoices.length - 1)];
+                targetVoice = preferredGenderVoice;
                 utterance.pitch = 0.76;
                 utterance.rate = 0.90;
             } else if (speakerLower.includes("ibrahim")) {
                 // process-driven DOP
-                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("microsoft") || v.name.toLowerCase().includes("zira") || v.name.toLowerCase().includes("hoda")) || languageMatchedVoices[Math.min(4, languageMatchedVoices.length - 1)];
+                targetVoice = preferredGenderVoice;
                 utterance.pitch = 1.00;
                 utterance.rate = 0.96;
             } else if (speakerLower.includes("asaad")) {
                 // structured Compliance Officer
-                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("english") || v.name.toLowerCase().includes("laila")) || languageMatchedVoices[Math.min(5, languageMatchedVoices.length - 1)];
+                targetVoice = preferredGenderVoice;
                 utterance.pitch = 1.03;
                 utterance.rate = 0.92;
             } else if (speakerLower.includes("abdullah")) {
                 // skeptical Internal Auditor
-                targetVoice = languageMatchedVoices.find(v => v.name.toLowerCase().includes("david") || v.name.toLowerCase().includes("naayf")) || languageMatchedVoices[languageMatchedVoices.length % 2];
+                targetVoice = preferredGenderVoice;
                 utterance.pitch = 0.88;
                 utterance.rate = 1.08;
+            } else if (isFemale) {
+                // Hoda or other female agents
+                targetVoice = getBestFemaleVoice();
+                utterance.pitch = 1.12;
+                utterance.rate = 0.98;
             } else {
-                targetVoice = languageMatchedVoices[0];
+                targetVoice = preferredGenderVoice;
+                utterance.pitch = 1.0;
+                utterance.rate = 1.0;
             }
         }
 

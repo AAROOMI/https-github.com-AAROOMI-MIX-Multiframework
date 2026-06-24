@@ -149,6 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
            
            <div className="space-y-1">
              <button
+                id="sidebar-virtualDepartment"
                 onClick={() => handleNavClick('virtualDepartment')}
                 className={`w-full text-left p-3 rounded-md text-[13px] transition-all duration-300 flex items-center group relative overflow-hidden ${
                   currentView === 'virtualDepartment'
@@ -432,6 +433,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {permissions.has('riskAssessment:read') && (
         <li className="mt-1">
           <button
+              id="sidebar-riskAssessment"
               onClick={() => handleNavClick('riskAssessment')}
               className={`w-full text-left p-3 rounded-md text-[13px] transition-all duration-300 flex items-center group relative overflow-hidden ${
                 currentView === 'riskAssessment'
@@ -529,6 +531,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {permissions.has('assessment:update') && (
         <li className="mt-1">
           <button
+              id="sidebar-liveVoiceDemo"
               onClick={() => handleNavClick('liveVoiceDemo')}
               className={`w-full text-left p-3 rounded-md text-[13px] transition-all duration-300 flex items-center group relative overflow-hidden ${
                 currentView === 'liveVoiceDemo'

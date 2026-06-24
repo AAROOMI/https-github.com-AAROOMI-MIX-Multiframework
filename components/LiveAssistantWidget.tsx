@@ -283,6 +283,25 @@ export const LiveAssistantWidget: React.FC<LiveAssistantProps & { onStatusChange
                             const response = await LocalLLM.generateResponse("hello");
                             setStatus('speaking');
                             const utterance = new SpeechSynthesisUtterance(response);
+                            
+                            // Find premium natural non-robotic voice
+                            const systemVoices = window.speechSynthesis.getVoices();
+                            const targetVoices = systemVoices.filter(v => v.lang.toLowerCase().startsWith('en'));
+                            const premiumKeywords = ['natural', 'neural', 'premium', 'google', 'apple', 'siri', 'samantha', 'aria', 'guy', 'david', 'zira', 'susan'];
+                            let bestVoice = null;
+                            for (const keyword of premiumKeywords) {
+                                bestVoice = targetVoices.find(v => v.name.toLowerCase().includes(keyword));
+                                if (bestVoice) break;
+                            }
+                            if (!bestVoice) {
+                                bestVoice = targetVoices.find(v => !v.name.toLowerCase().includes('local') && !v.name.toLowerCase().includes('espeak')) || targetVoices[0] || null;
+                            }
+                            if (bestVoice) {
+                                utterance.voice = bestVoice;
+                            }
+                            utterance.rate = 0.95; // Warm human conversational speed
+                            utterance.pitch = 1.02; // Soft pleasant pitch
+
                             utterance.onend = () => setStatus('listening');
                             window.speechSynthesis.speak(utterance);
                             setAssistantTranscript(response);

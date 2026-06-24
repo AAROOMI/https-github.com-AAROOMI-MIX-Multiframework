@@ -39,6 +39,7 @@ import { RiskAssistant } from './components/RiskAssistant';
 import { BreadcrumbReferenceSheet } from './components/BreadcrumbReferenceSheet';
 import { AccordionShowcase } from './components/AccordionShowcase';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { motion } from 'motion/react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { eccData } from './data/controls';
@@ -80,6 +81,17 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
+  const [forceLocalLLM, setForceLocalLLM] = useState(() => {
+    return localStorage.getItem('force_local_llm') === 'true';
+  });
+
+  const toggleLocalLLM = () => {
+    const newVal = !forceLocalLLM;
+    setForceLocalLLM(newVal);
+    localStorage.setItem('force_local_llm', newVal ? 'true' : 'false');
+    window.dispatchEvent(new Event('local_llm_toggle'));
+  };
+
   const [language, setLanguage] = useState<'en' | 'ar'>(() => {
     return (localStorage.getItem('app_lang') as 'en' | 'ar') || 'en';
   });
@@ -98,6 +110,13 @@ export default function App() {
       localStorage.setItem('theme', 'light');
     }
   }, [theme]);
+
+  // Listen for the start interactive voice journey event
+  useEffect(() => {
+    const handleStartTour = () => setShowTour(true);
+    window.addEventListener('start-voice-tour', handleStartTour);
+    return () => window.removeEventListener('start-voice-tour', handleStartTour);
+  }, []);
 
   
   // Data State
@@ -704,17 +723,31 @@ export default function App() {
                         title="Navigate with voice"
                     >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                        <span className="text-[9px] font-bold uppercase tracking-wider">Voice</span>
+                        <span className="text-[9px] font-normal uppercase tracking-wider">Voice</span>
                     </button>
                     <button
                         onClick={() => {
                             setIsHeadlessMode(false);
                             setShowLiveAssistant(true);
                         }}
-                        className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[9px] font-bold uppercase tracking-wider rounded-full shadow-lg shadow-cyan-500/20 hover:scale-105 active:scale-95 transition-all"
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${
+                            showLiveAssistant && !isHeadlessMode
+                            ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 animate-pulse'
+                            : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:bg-black/10 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-white/80'
+                        }`}
                     >
-                        <SparklesIcon className="w-3 h-3" />
-                        Live Assistant
+                        <SparklesIcon className="w-3 h-3 text-cyan-500" />
+                        <span className="text-[9px] font-normal uppercase tracking-wider">Live Assistant</span>
+                    </button>
+                    <button
+                        onClick={() => setShowTour(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-slate-500 dark:text-slate-400 hover:bg-black/10 dark:hover:bg-white/10 hover:text-slate-800 dark:hover:text-white/80 rounded-full transition-all text-[9px] font-normal uppercase tracking-wider"
+                        title={language === 'ar' ? 'تشغيل المساعد الصوتي التفاعلي' : 'Start interactive voice journey'}
+                    >
+                        <svg className="w-3 h-3 text-emerald-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 18.75V5.25L7.75 9.5H4.5V14.5H7.75L12 18.75Z" />
+                        </svg>
+                        <span>{language === 'ar' ? 'الدليل الصوتي' : 'Voice Journey'}</span>
                     </button>
                 </div>
                 
@@ -722,7 +755,7 @@ export default function App() {
                     {/* Language Switcher */}
                     <button 
                         onClick={() => setLanguage(l => l === 'en' ? 'ar' : 'en')}
-                        className="px-3 py-1 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex items-center gap-1"
+                        className="px-3 py-1.5 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full text-[9px] font-normal uppercase tracking-wider text-slate-700 dark:text-slate-300 hover:bg-black/10 dark:hover:bg-white/10 transition-colors flex items-center gap-1"
                         title={translations[language].select_lang}
                     >
                         <svg className="w-3.5 h-3.5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -737,25 +770,85 @@ export default function App() {
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                         }
                     </button>
-                    {!isOnline ? (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 shadow-sm shadow-amber-500/10">
-                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
-                            <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].edge_ai_active}</span>
+                    {/* Air-Gapped Local LLM Active Button Toggle (Compact Water Gel Translucent Button) */}
+                    <motion.button 
+                        onClick={toggleLocalLLM}
+                        whileHover={{ scale: 1.04, y: -0.2 }}
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border font-normal uppercase tracking-wider transition-all duration-500 overflow-hidden cursor-pointer select-none ${
+                            forceLocalLLM 
+                                ? 'bg-gradient-to-r from-purple-500/15 via-fuchsia-500/15 to-pink-500/15 border-fuchsia-400/30 text-fuchsia-300 shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.35),inset_0_-1.5px_3px_rgba(168,85,247,0.2),0_6px_16px_-4px_rgba(168,85,247,0.3),0_0_8px_rgba(217,70,239,0.15)]' 
+                                : 'bg-gradient-to-r from-cyan-500/5 via-teal-500/5 to-blue-500/5 border-cyan-400/20 text-cyan-500 dark:text-cyan-400 shadow-[inset_0_1.5px_3px_rgba(255,255,255,0.2),inset_0_-1.5px_3px_rgba(6,182,212,0.05),0_3px_8px_-2px_rgba(6,182,212,0.1)] hover:border-cyan-400/30 hover:text-cyan-400'
+                        }`}
+                        title={language === 'en' ? "Toggle local air-gapped Google Gemma model" : "تبديل نموذج الذكاء الاصطناعي المحلي الآمن غيما"}
+                    >
+                        {/* 3D Liquid Specular Highlights (Multi-layered physical glass/gel refraction effects) */}
+                        <div className="absolute top-0 left-0 right-0 h-[45%] bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+                        <div className="absolute top-[0.5px] left-1.5 right-1.5 h-[2px] rounded-full bg-white/35 pointer-events-none blur-[0.2px]" />
+                        <div className="absolute bottom-[0.5px] left-2 right-2 h-[1px] rounded-full bg-gradient-to-t from-white/10 to-transparent pointer-events-none" />
+
+                        {/* Liquid Ripple Wave underlay */}
+                        <div className={`absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.12),transparent_60%)] ${forceLocalLLM ? 'animate-pulse' : ''}`} />
+
+                        {/* Neural Link Water-Gel Pulse Indicator */}
+                        <div className="relative flex items-center justify-center">
+                            <span className={`w-2 h-2 rounded-full opacity-55 ${
+                                forceLocalLLM 
+                                    ? 'bg-fuchsia-400 animate-ping absolute' 
+                                    : 'bg-cyan-400 animate-ping absolute'
+                            }`}></span>
+                            <span className={`w-1.5 h-1.5 rounded-full relative transition-all duration-500 ${
+                                forceLocalLLM 
+                                    ? 'bg-gradient-to-br from-pink-300 to-purple-600 shadow-[0_0_6px_rgba(232,121,249,0.8)]' 
+                                    : 'bg-gradient-to-br from-cyan-300 to-teal-500 shadow-[0_0_4px_rgba(34,211,238,0.7)]'
+                            }`}></span>
+                        </div>
+
+                        {/* Micro spark of intelligence */}
+                        <svg className={`w-2.5 h-2.5 ${forceLocalLLM ? 'text-fuchsia-300 animate-pulse' : 'text-cyan-400'} transition-all`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+
+                        {/* Label */}
+                        <span className="text-[9px] font-normal uppercase tracking-widest relative z-10 select-none">
+                            {forceLocalLLM 
+                                ? (language === 'en' ? "Neural Link" : "رابط عصبي") 
+                                : (language === 'en' ? "Local Link" : "ربط محلي")}
+                        </span>
+                    </motion.button>
+
+                    {!forceLocalLLM && (
+                        !isOnline ? (
+                            <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-500 shadow-sm shadow-amber-500/10">
+                                <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
+                                <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].edge_ai_active}</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 px-3 py-1 bg-teal-500/10 border border-teal-500/20 rounded-full text-teal-400 shadow-sm shadow-teal-500/10">
+                                <div className="flex gap-0.5">
+                                    <div className="w-1 h-1 bg-teal-400 rounded-full"></div>
+                                    <div className="w-1 h-1 bg-teal-400 rounded-full animate-bounce"></div>
+                                    <div className="w-1 h-1 bg-teal-400 rounded-full"></div>
+                                </div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].neural_link}</span>
+                            </div>
+                        )
+                    )}
+
+                    {forceLocalLLM ? (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-indigo-500/15 border border-indigo-500/30 rounded-full text-indigo-400 animate-pulse">
+                            <svg className="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                            <span className="text-[9px] font-extrabold uppercase tracking-widest">Sovereign Mode</span>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-teal-500/10 border border-teal-500/20 rounded-full text-teal-400 shadow-sm shadow-teal-500/10">
-                            <div className="flex gap-0.5">
-                                <div className="w-1 h-1 bg-teal-400 rounded-full"></div>
-                                <div className="w-1 h-1 bg-teal-400 rounded-full animate-bounce"></div>
-                                <div className="w-1 h-1 bg-teal-400 rounded-full"></div>
-                            </div>
-                            <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].neural_link}</span>
+                        <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].local_llm_ready}</span>
                         </div>
                     )}
-                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-400">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        <span className="text-[9px] font-bold uppercase tracking-wider">{translations[language].local_llm_ready}</span>
-                    </div>
                     <button onClick={handleLogout} className="text-[11px] font-bold uppercase tracking-wider text-slate-500 hover:text-red-400 transition-colors ml-2">{translations[language].secured_terminate}</button>
                 </div>
             </div>
@@ -926,7 +1019,7 @@ export default function App() {
                     onDisableMfa={async () => { return { success: true, message: "MFA Disabled" }; }}
                 />
             )}
-            {currentView === 'help' && <HelpSupportPage onStartTour={() => setShowTour(true)} />}
+            {currentView === 'help' && <HelpSupportPage onStartTour={() => setShowTour(true)} language={language} />}
             {currentView === 'training' && (
                 <TrainingPage 
                     userProgress={trainingProgress}
@@ -997,7 +1090,13 @@ export default function App() {
                     }}
                 />
             )}
-            {currentView === 'superAdmin' && <SuperAdminPage currentUser={currentUser} />}
+            {currentView === 'superAdmin' && (
+                <SuperAdminPage 
+                    currentUser={currentUser} 
+                    forceLocalLLM={forceLocalLLM}
+                    onToggleLocalLLM={toggleLocalLLM}
+                />
+            )}
             {currentView === 'integrations' && (
                 <IntegrationsPage 
                     onAddRisk={(category, risk) => {
@@ -1110,12 +1209,9 @@ export default function App() {
         <TourGuide 
             isOpen={showTour} 
             onClose={() => setShowTour(false)} 
-            steps={[
-                { target: 'body', title: 'Welcome', content: 'Welcome to the Cybersecurity Controls Navigator. This quick tour will show you around.', position: 'center' },
-                { target: '#sidebar-dashboard', title: 'Dashboard', content: 'See your compliance status at a glance.', position: 'right' },
-                { target: '#sidebar-navigator-header', title: 'Controls Navigator', content: 'Browse and manage NCA ECC controls.', position: 'right' },
-                // ... more steps
-            ]} 
+            currentView={currentView}
+            onSetView={setCurrentView}
+            language={language}
         />
 
         {/* Modals */}

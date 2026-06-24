@@ -14,6 +14,7 @@ interface Participant {
     hasLaptop: boolean;
     hasMic: boolean;
     isHuman?: boolean;
+    gender?: 'male' | 'female';
 }
 
 interface MeetingRoomPageProps {
@@ -139,7 +140,7 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
 
             // Optional vocal synthesis for spontaneous interventions
             if (Math.random() > 0.6) {
-                speakVoice(`Regarding this topic, the ${speaker.role} has logged comments into the compliance minutes.`, speaker.role);
+                speakVoice(`Regarding this topic, the ${speaker.role} has logged comments into the compliance minutes.`, speaker.role, speaker.gender);
             }
 
         }, 7000);
@@ -222,7 +223,7 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
 
                 setActiveSpeakerId(matchedBot.id);
                 setMeetingMinutes(prev => [`${matchedBot.name} (${matchedBot.role}): "${responseText}"`, ...prev].slice(0, 15));
-                await speakVoice(responseText, matchedBot.role);
+                await speakVoice(responseText, matchedBot.role, matchedBot.gender);
             } else {
                 // Fallback
                 const bot = bots[0];
@@ -233,7 +234,7 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
                     ? "لقد استلمنا مداخلتك وسندمجها في تقييمات المخاطر القادمة لدينا."
                     : "We have received your input, and will integrate this into our upcoming risk evaluations.";
                 setMeetingMinutes(prev => [`${bot.name} (${bot.role}): "${msg}"`, ...prev].slice(0, 15));
-                await speakVoice(msg, bot.role);
+                await speakVoice(msg, bot.role, bot.gender);
             }
 
         } catch (e) {
@@ -245,8 +246,8 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
         }
     };
 
-    // Text to Speech playback
-    const speakVoice = (text: string, role: string) => {
+    // Text to Speech playback with gender-based natural voice profiles (using professional D-ID equivalent settings)
+    const speakVoice = (text: string, role: string, gender?: 'male' | 'female') => {
         return new Promise<void>((resolve) => {
             if (!('speechSynthesis' in window)) {
                 resolve();
@@ -277,13 +278,18 @@ export const MeetingRoomPage: React.FC<MeetingRoomPageProps> = ({ currentUser })
                 v.lang.toLowerCase().includes(langPattern + '-')
             );
 
-            // Female gender check (DPO - Hoda AI)
-            const isFemale = role.toLowerCase() === 'dpo' || role.toLowerCase().includes('data protection officer');
+            // Precise Gender Check: prioritize agent gender attribute, fallback on role identification
+            const isFemale = gender === 'female' || role.toLowerCase() === 'dpo' || role.toLowerCase().includes('data protection officer');
 
             const scoreVoice = (voice: SpeechSynthesisVoice) => {
                 let score = 0;
                 const name = voice.name.toLowerCase();
                 
+                // Actively penalize legacy, local, or eSpeak robotic systems to prioritize rich human warmth
+                if (name.includes('local') || name.includes('espeak') || name.includes('synth') || name.includes('robotic')) {
+                    score -= 100;
+                }
+
                 // Boost premium, high-quality, neural, or natural voices
                 if (name.includes('natural') || name.includes('neural') || name.includes('premium') || name.includes('siri') || name.includes('enhanced') || name.includes('wavenet') || name.includes('high') || name.includes('quality') || name.includes('hd')) {
                     score += 50;

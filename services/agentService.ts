@@ -103,7 +103,8 @@ export class AgentService {
         `;
 
     const loadAgentDecision = async () => {
-        if (!window.navigator.onLine) {
+        const forceLocal = typeof window !== 'undefined' && localStorage.getItem('force_local_llm') === 'true';
+        if (!window.navigator.onLine || forceLocal) {
             const localResponse = await import('./localLLM').then(m => m.LocalLLM.generateResponse(userRequest));
             try {
                 return JSON.parse(localResponse) as OrchestratorDecision;

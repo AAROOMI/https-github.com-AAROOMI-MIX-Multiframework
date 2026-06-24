@@ -145,9 +145,13 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
 
             const getBestMaleVoice = () => {
                 const preferredKeywords = [
-                    'google us english male',
                     'natural male',
                     'premium male',
+                    'neural male',
+                    'google male',
+                    'microsoft male',
+                    'apple male',
+                    'google us english male',
                     'guy',
                     'david',
                     'mark',
@@ -161,12 +165,47 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
                     const voice = voicesList.find(v => v.name.toLowerCase().includes(keyword) && v.lang.toLowerCase().startsWith('en'));
                     if (voice) return voice;
                 }
+                const nonRobotic = voicesList.find(v => !v.name.toLowerCase().includes('local') && !v.name.toLowerCase().includes('espeak') && v.lang.toLowerCase().startsWith('en'));
+                if (nonRobotic) return nonRobotic;
+
                 const anyMale = voicesList.find(v => (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('guy')) && v.lang.toLowerCase().startsWith('en'));
                 if (anyMale) return anyMale;
                 return voicesList.find(v => v.lang.toLowerCase().startsWith('en'));
             };
 
-            const selectedVoice = getBestMaleVoice();
+            const getBestFemaleVoice = () => {
+                const preferredKeywords = [
+                    'natural female',
+                    'premium female',
+                    'neural female',
+                    'google female',
+                    'microsoft female',
+                    'apple female',
+                    'google us english female',
+                    'zira',
+                    'hazel',
+                    'susan',
+                    'siri',
+                    'samantha',
+                    'mary',
+                    'kore',
+                    'heera',
+                    'female'
+                ];
+                for (const keyword of preferredKeywords) {
+                    const voice = voicesList.find(v => v.name.toLowerCase().includes(keyword) && v.lang.toLowerCase().startsWith('en'));
+                    if (voice) return voice;
+                }
+                const nonRobotic = voicesList.find(v => !v.name.toLowerCase().includes('local') && !v.name.toLowerCase().includes('espeak') && v.lang.toLowerCase().startsWith('en'));
+                if (nonRobotic) return nonRobotic;
+
+                const anyFemale = voicesList.find(v => (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('siri') || v.name.toLowerCase().includes('samantha')) && v.lang.toLowerCase().startsWith('en'));
+                if (anyFemale) return anyFemale;
+                return voicesList.find(v => v.lang.toLowerCase().startsWith('en'));
+            };
+
+            const isFemale = role.toUpperCase() === 'DPO' || role.toLowerCase().includes('data protection officer');
+            const selectedVoice = isFemale ? getBestFemaleVoice() : getBestMaleVoice();
             if (selectedVoice) {
                 utterance.voice = selectedVoice;
             }

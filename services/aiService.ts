@@ -25,8 +25,9 @@ export class AIService {
     }
 
     static async generateContent(prompt: string, options: { model?: string; schema?: any; systemInstruction?: string; image?: { data: string; mimeType: string } } = {}): Promise<string> {
-        if (!window.navigator.onLine) {
-            console.log("Device is offline. Using Local LLM.");
+        const forceLocal = typeof window !== 'undefined' && localStorage.getItem('force_local_llm') === 'true';
+        if (!window.navigator.onLine || forceLocal) {
+            console.log("Device is offline or Local LLM (Google Gemma 4) is active.");
             return await LocalLLM.generateResponse(prompt);
         }
 
@@ -68,18 +69,13 @@ export class AIService {
     static async generateStructuredContent<T>(prompt: string, schema: any, modelName: string = "gemini-2.5-flash", systemInstruction?: string): Promise<T> {
         console.log(`Starting structured generation with model: ${modelName}`);
         
-        if (!window.navigator.onLine) {
+        const forceLocal = typeof window !== 'undefined' && localStorage.getItem('force_local_llm') === 'true';
+        if (!window.navigator.onLine || forceLocal) {
             const response = await LocalLLM.generateResponse(prompt);
             try {
                 // If it's a decision request, provide a structured offline response
                 if (prompt.includes("Aggregate") || prompt.includes("Orchestrator")) {
-                    return {
-                        summary: "The system is currently OFFLINE. Multi-agent coordination is simulated in local mode. Please restore connection for full GRC team activation.",
-                        riskLevel: "medium",
-                        complianceStatus: "undetermined",
-                        nfa: [{ action: "Restore internet connection for full GRC team activation", priority: "high", status: "open" }],
-                        agentTrace: [{ agentRole: "Offline Controller", reasoning: "Directing to local cache due to lack of connectivity." }]
-                    } as any;
+                    return JSON.parse(response);
                 }
                 return JSON.parse(this.extractJson(response));
             } catch {

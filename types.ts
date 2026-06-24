@@ -53,6 +53,7 @@ export interface VirtualAgent {
   jobAttributes: string[]; // e.g., "Detail Oriented", "Strategic"
   reportingLine: string; // Who they report to (Top-Down approach)
   voiceName: string; // Gemini Voice Name (e.g., 'Puck', 'Kore', 'Fenrir')
+  gender?: 'male' | 'female';
   avatarUrl: string;
   capabilities: string[];
   status: 'Idle' | 'Working' | 'Reviewing' | 'Meeting';

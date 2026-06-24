@@ -19,6 +19,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Strategic Thinker', 'Technical Expert', 'Decisive', 'Innovation-Driven'],
         reportingLine: 'CEO',
         voiceName: 'Fenrir', // Deep, authoritative male voice
+        gender: 'male',
         avatarUrl: '/src/assets/images/regenerated_image_1782026333854.png',
         capabilities: ['Security Architecture', 'Infrastructure Audit', 'Technical Remediation', 'Cloud Security Strategy'],
         status: 'Idle'
@@ -40,6 +41,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Business-Aligned', 'Resource Optimizer', 'Visionary', 'Leader'],
         reportingLine: 'CEO',
         voiceName: 'Puck', // Clear, professional male voice
+        gender: 'male',
         avatarUrl: '/src/assets/images/regenerated_image_1782026338333.png',
         capabilities: ['IT Strategy', 'Resource Management', 'Digital Transformation', 'Budget Approval'],
         status: 'Idle'
@@ -61,6 +63,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Risk-Focused', 'Analytical', 'Protective', 'Compliance-Oriented'],
         reportingLine: 'CIO (administratively) / CEO (functionally)',
         voiceName: 'Fenrir', // Deep, authoritative male voice
+        gender: 'male',
         avatarUrl: '/src/assets/images/regenerated_image_1782026343461.jpg',
         capabilities: ['Risk Management', 'Threat Assessment', 'Policy Development', 'Incident Command'],
         status: 'Idle'
@@ -82,6 +85,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Methodical', 'Analytical', 'Cautionary', 'Standards-Compliant'],
         reportingLine: 'CISO',
         voiceName: 'Charon', // Deep, steady voice
+        gender: 'male',
         avatarUrl: '/src/assets/images/regenerated_image_1782026344073.png',
         capabilities: ['ISO 31000 Assessments', 'Risk Registry Management', 'Control Effectiveness Review', 'Mitigation Planning'],
         status: 'Idle'
@@ -103,6 +107,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Process-Driven', 'Execution-Focused', 'Efficient', 'Operational'],
         reportingLine: 'CISO',
         voiceName: 'Charon', 
+        gender: 'male',
         avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['Operational Security', 'Workflow Management', 'Access Control', 'Implementation Oversight'],
         status: 'Idle'
@@ -124,6 +129,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Meticulous', 'Regulatory Expert', 'Diligent', 'Structured'],
         reportingLine: 'CISO',
         voiceName: 'Aoede', // Professional, articulate voice
+        gender: 'male',
         avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['Regulatory Reporting', 'Audit Preparation', 'Data Protection', 'Framework Mapping'],
         status: 'Idle'
@@ -145,6 +151,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Objective', 'Skeptical', 'Data-Driven', 'Tech-Savvy'],
         reportingLine: 'Audit Committee / CEO',
         voiceName: 'Zephyr', // Standard friendly assistant voice, slightly more formal
+        gender: 'male',
         avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['CNN Analysis', 'Evidence Gathering', 'Continuous Monitoring', 'Audit Trail Management'],
         status: 'Idle'
@@ -165,6 +172,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Technical', 'Detail-Oriented', 'Skeptical', 'Developer-Friendly'],
         reportingLine: 'CTO',
         voiceName: 'Zephyr',
+        gender: 'male',
         avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['Static Analysis (SAST)', 'Secure SDLC Guidance', 'Dependency Auditing', 'OWASP Mitigation'],
         status: 'Idle'
@@ -185,6 +193,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Resilient', 'Analytical', 'Strategic', 'Proactive'],
         reportingLine: 'CIO',
         voiceName: 'Charon',
+        gender: 'male',
         avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['Business Impact Analysis', 'DR Runbook Modeling', 'Crisis Action Planning', 'ISO 22301 Alignment'],
         status: 'Idle'
@@ -205,6 +214,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Standards-Driven', 'Methodical', 'Compliance-Focused', 'Precise'],
         reportingLine: 'Compliance Officer',
         voiceName: 'Fenrir',
+        gender: 'male',
         avatarUrl: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['ISMS Implementation', 'Annex A Controls Audit', 'Statement of Applicability', 'ISO Certification Readiness'],
         status: 'Idle'
@@ -225,6 +235,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Framework-Schooled', 'Analytical', 'Technical', 'Systems-Thinker'],
         reportingLine: 'CISO',
         voiceName: 'Puck',
+        gender: 'male',
         avatarUrl: 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['NIST CSF Benchmarking', 'NIST SP 800-53 Mapping', 'Control Family Remediation', 'Hardening Directives'],
         status: 'Idle'
@@ -245,6 +256,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Privacy-Centric', 'Regulatory Expert', 'Meticulous', 'Independent'],
         reportingLine: 'CEO / Legal',
         voiceName: 'Aoede',
+        gender: 'female',
         avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['DPIA Evaluation', 'Privacy-by-Design Audits', 'Consent Governance', 'PDPL/GDPR Reporting'],
         status: 'Idle'
@@ -265,6 +277,7 @@ export const virtualAgents: VirtualAgent[] = [
         jobAttributes: ['Execution-Focused', 'Vigilant', 'Pragmatic', 'Communicator'],
         reportingLine: 'CISO',
         voiceName: 'Zephyr',
+        gender: 'male',
         avatarUrl: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
         capabilities: ['Baseline Enforcement', 'Daily Patch Checklist', 'Security Incident Level 1', 'Privilege Verification'],
         status: 'Idle'

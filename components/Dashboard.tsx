@@ -551,6 +551,44 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ repository, curren
                 </p>
             </div>
 
+            {/* Interactive Voice Journey Banner */}
+            <div className="bg-gradient-to-r from-teal-500/10 via-cyan-500/10 to-blue-500/10 dark:from-teal-950/25 dark:via-cyan-950/25 dark:to-blue-950/25 border border-teal-500/20 dark:border-teal-500/30 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <span className="flex h-2.5 w-2.5 relative">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+                        </span>
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-cyan-600 dark:text-cyan-400">
+                            {language === 'ar' ? 'ميزة جديدة' : 'New Feature'}
+                        </span>
+                    </div>
+                    <h2 className="text-sm font-bold text-slate-800 dark:text-white">
+                        {language === 'ar' 
+                            ? 'استكشف المنصة بالدليل الصوتي التفاعلي' 
+                            : 'Explore GRC with our interactive Voice Journey'}
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+                        {language === 'ar'
+                            ? 'سيقوم مساعد الذكاء الاصطناعي الصوتي بمرافقتك لتوضيح لوحة التحكم، ومجلس الإدارة الافتراضي، وأدوات سجل المخاطر والربط المحلي الآمن بنموذج غيما ٤.'
+                            : 'Let our virtual AI assistant guide you step-by-step through our GRC dashboards, virtual boardroom, ISO 31000 risk registers, and secure air-gapped Gemma model links.'}
+                    </p>
+                </div>
+                <button
+                    onClick={() => {
+                        window.dispatchEvent(new CustomEvent('start-voice-tour'));
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/10 transition-all shrink-0 cursor-pointer"
+                >
+                    <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 18.75V5.25L7.75 9.5H4.5V14.5H7.75L12 18.75Z" />
+                    </svg>
+                    <span>
+                        {language === 'ar' ? 'تشغيل الجولة الصوتية' : 'Start Spoken Journey'}
+                    </span>
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 <OverallComplianceChart percentage={stats.compliance} />
                 <Card className="flex flex-col justify-between">
