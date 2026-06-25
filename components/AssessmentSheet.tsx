@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import type { AssessmentItem, ControlStatus } from '../types';
-import { UploadIcon, PaperClipIcon, CloseIcon } from './Icons';
+import { UploadIcon, PaperClipIcon, CloseIcon, SparklesIcon } from './Icons';
 
 const allStatuses: ControlStatus[] = ['Implemented', 'Partially Implemented', 'Not Implemented', 'Not Applicable'];
 
@@ -13,10 +13,12 @@ interface EditableControlRowProps {
     index: number;
     isGenerating?: boolean;
     activeField?: keyof AssessmentItem | null;
+    onGenerateCmaDocuments?: (item: AssessmentItem) => Promise<void>;
 }
 
 // A component for a single editable control row.
-const EditableControlRow: React.FC<EditableControlRowProps> = ({ item, onUpdateItem, isEditable, canUpdate, index, isGenerating, activeField }) => {
+const EditableControlRow: React.FC<EditableControlRowProps> = ({ item, onUpdateItem, isEditable, canUpdate, index, isGenerating, activeField, onGenerateCmaDocuments }) => {
+    const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
     const [localItem, setLocalItem] = useState(item);
     const [isSaving, setIsSaving] = useState(false);
     const timeoutRef = useRef<number | null>(null);
@@ -121,8 +123,32 @@ const EditableControlRow: React.FC<EditableControlRowProps> = ({ item, onUpdateI
                     {index + 1}
                 </div>
                 <div className="flex-grow">
-                    <h3 className="text-lg font-normal text-teal-700 dark:text-teal-300 font-mono">{item.controlCode}</h3>
-                    <p className="mt-1 text-sm text-gray-800 dark:text-gray-200">{item.controlName}</p>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-lg font-normal text-teal-700 dark:text-teal-300 font-mono">{item.controlCode}</h3>
+                            <p className="mt-1 text-sm text-gray-800 dark:text-gray-200">{item.controlName}</p>
+                        </div>
+                        {onGenerateCmaDocuments && (
+                            <button
+                                onClick={async () => {
+                                    setIsGeneratingDocs(true);
+                                    try {
+                                        await onGenerateCmaDocuments(item);
+                                    } catch (err) {
+                                        console.error(err);
+                                    } finally {
+                                        setIsGeneratingDocs(false);
+                                    }
+                                }}
+                                disabled={isGeneratingDocs}
+                                className={`inline-flex items-center gap-2 px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow text-white bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transform transition active:scale-95 disabled:opacity-50 disabled:cursor-wait`}
+                                type="button"
+                            >
+                                <SparklesIcon className={`w-3.5 h-3.5 ${isGeneratingDocs ? 'animate-spin' : 'animate-pulse'}`} />
+                                {isGeneratingDocs ? 'Generating...' : 'Auto-Generate Compliance Pack'}
+                            </button>
+                        )}
+                    </div>
 
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                         <div className="md:col-span-2">
@@ -248,9 +274,10 @@ interface AssessmentSheetProps {
     generatingRecommendationFor?: string | null;
     activeControlCode?: string | null;
     activeField?: keyof AssessmentItem | null;
+    onGenerateCmaDocuments?: (item: AssessmentItem) => Promise<void>;
 }
 
-export const AssessmentSheet: React.FC<AssessmentSheetProps> = ({ filteredDomains, onUpdateItem, isEditable, canUpdate, generatingRecommendationFor, activeControlCode, activeField }) => {
+export const AssessmentSheet: React.FC<AssessmentSheetProps> = ({ filteredDomains, onUpdateItem, isEditable, canUpdate, generatingRecommendationFor, activeControlCode, activeField, onGenerateCmaDocuments }) => {
     
     let controlCounter = 0;
 
@@ -274,6 +301,7 @@ export const AssessmentSheet: React.FC<AssessmentSheetProps> = ({ filteredDomain
                                     index={domainStartIndex + index}
                                     isGenerating={generatingRecommendationFor === item.controlCode}
                                     activeField={activeControlCode === item.controlCode ? activeField : null}
+                                    onGenerateCmaDocuments={onGenerateCmaDocuments}
                                 />
                             ))}
                         </div>

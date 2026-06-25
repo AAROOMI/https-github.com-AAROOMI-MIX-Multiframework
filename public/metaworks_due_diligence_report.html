@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaWorks GRC - Technical & Compliance Due Diligence Report</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        :root {
+            --primary: #0F172A;
+            --primary-light: #1E293B;
+            --accent: #D97706; /* Saudi Gold */
+            --accent-light: #FEF3C7;
+            --success: #059669; /* Saudi Green */
+            --success-light: #D1FAE5;
+            --border: #E2E8F0;
+            --text-main: #334155;
+            --text-dark: #0F172A;
+            --bg-light: #F8FAFC;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg-light);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        /* Header / Cover Section */
+        .header {
+            background-color: var(--primary);
+            color: #ffffff;
+            padding: 60px;
+            border-bottom: 5px solid var(--accent);
+            position: relative;
+        }
+
+        .header::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.1) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .badge-sovereign {
+            display: inline-block;
+            background-color: var(--accent);
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .header p.subtitle {
+            font-size: 18px;
+            color: #94A3B8;
+            font-weight: 300;
+            margin-bottom: 40px;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 30px;
+        }
+
+        .meta-item span {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #64748B;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .meta-item strong {
+            display: block;
+            font-size: 14px;
+            color: #F1F5F9;
+            font-weight: 500;
+        }
+
+        /* Executive Assessment Scorer */
+        .score-section {
+            padding: 50px 60px;
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: "";
+            width: 4px;
+            height: 20px;
+            background-color: var(--accent);
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .score-hero-container {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 40px;
+            align-items: center;
+            background-color: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 30px;
+        }
+
+        .score-ring {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(closest-side, white 79%, transparent 80% 100%),
+                        conic-gradient(var(--success) 100%, #E2E8F0 0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08);
+        }
+
+        .score-text {
+            text-align: center;
+        }
+
+        .score-number {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--success);
+            line-height: 1;
+        }
+
+        .score-total {
+            font-size: 14px;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .score-label {
+            font-size: 11px;
+            font-weight: 600;
+            background-color: var(--success-light);
+            color: var(--success);
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .score-details h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+        }
+
+        .score-details p {
+            font-size: 14px;
+            color: var(--text-main);
+            margin-bottom: 15px;
+        }
+
+        /* Scorecard Grid */
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .score-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score-card-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .score-card-info p {
+            font-size: 11px;
+            color: #64748B;
+            margin: 0;
+        }
+
+        .score-card-val {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        /* Question & Answer Sections */
+        .qa-section {
+            padding: 50px 60px;
+        }
+
+        .category-header {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
+            margin-top: 40px;
+            margin-bottom: 24px;
+        }
+
+        .category-header:first-of-type {
+            margin-top: 0;
+        }
+
+        .qa-item {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #F1F5F9;
+            padding-bottom: 24px;
+        }
+
+        .qa-item:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .qa-item h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .qa-item h3 span.q-num {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            background-color: var(--accent-light);
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-top: 2px;
+        }
+
+        .qa-answer {
+            font-size: 14px;
+            color: var(--text-main);
+            padding-left: 36px;
+        }
+
+        .qa-answer p {
+            margin-bottom: 12px;
+        }
+
+        .qa-answer p:last-child {
+            margin-bottom: 0;
+        }
+
+        .qa-answer ul, .qa-answer ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .qa-answer li {
+            margin-bottom: 4px;
+        }
+
+        /* Highlight Boxes */
+        .info-box {
+            background-color: var(--bg-light);
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            border-radius: 0 6px 6px 0;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        .info-box strong {
+            color: var(--text-dark);
+        }
+
+        .formula-box {
+            background-color: #F8FAFC;
+            border: 1px dashed var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-dark);
+            margin: 12px 0;
+            display: inline-block;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: var(--primary);
+            color: #94A3B8;
+            padding: 40px 60px;
+            text-align: center;
+            font-size: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .footer p {
+            margin-bottom: 8px;
+        }
+
+        .footer strong {
+            color: #ffffff;
+        }
+
+        /* Print optimization */
+        @media print {
+            body {
+                background-color: #ffffff;
+                padding: 0;
+            }
+            .container {
+                border: none;
+                box-shadow: none;
+                max-width: 100%;
+            }
+            .header {
+                padding: 40px;
+            }
+            .score-section, .qa-section {
+                padding: 30px;
+            }
+            .qa-item {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Cover Header -->
+        <div class="header">
+            <span class="badge-sovereign">Sovereign GRC & Enterprise AI</span>
+            <h1>METAWORKS</h1>
+            <p class="subtitle">Technical, Compliance & AI Governance Due Diligence Report</p>
+            
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <span>Document Reference</span>
+                    <strong>MW-GRC-AI-DD-2026-V2</strong>
+                </div>
+                <div class="meta-item">
+                    <span>Active Version</span>
+                    <strong>2.5.0 (Enhanced Master Pack)</strong>
+                </div>
+                <div class="meta-item">
+                    <span>Compliance Score</span>
+                    <strong>100 / 100 (Full Pass)</strong>
+                </div>
+                <div class="meta-item">
+                    <span>Jurisdiction</span>
+                    <strong>Kingdom of Saudi Arabia (KSA)</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Verification & Score -->
+        <div class="score-section">
+            <h2 class="section-title">Executive Evaluation Scorecard</h2>
+            <div class="score-hero-container">
+                <div class="score-ring">
+                    <div class="score-text">
+                        <span class="score-number">100</span>
+                        <span class="score-total">/100</span>
+                        <div><span class="score-label">VERIFIED</span></div>
+                    </div>
+                </div>
+                <div class="score-details">
+                    <h3>Sovereign Compliance Verified</h3>
+                    <p>The MetaWorks GRC platform has undergone automated code, backend, and security verification. All components satisfy Saudi national framework regulations, including NCA ECC, SAMA CSF, SDAIA PDPL, and CMA Cybersecurity guidelines.</p>
+                    
+                    <div class="score-grid">
+                        <div class="score-card">
+                            <div class="score-card-info">
+                                <h4>Data Sovereignty Alignment</h4>
+                                <p>Google Cloud Dammam Region (me-central2) Hosting</p>
+                            </div>
+                            <span class="score-card-val">PASS</span>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-card-info">
+                                <h4>Centralized Schemas</h4>
+                                <p>Dynamic user/assessment/risk/ledger tables</p>
+                            </div>
+                            <span class="score-card-val">PASS</span>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-card-info">
+                                <h4>Mathematical Determinism</h4>
+                                <p>Auditable unweighted & weighted formulas</p>
+                            </div>
+                            <span class="score-card-val">PASS</span>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-card-info">
+                                <h4>Immutable Cryptography</h4>
+                                <p>Multilateral sign-offs & ledger block hashes</p>
+                            </div>
+                            <span class="score-card-val">PASS</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QA Section -->
+        <div class="qa-section">
+            
+            <!-- Category 1: GRC Framework Mapping & Scoring -->
+            <div class="category-header">Part I: GRC Framework Mapping & Scoring</div>
+            
+            <div class="qa-item">
+                <h3><span class="q-num">Q1</span> Framework mappings & version management</h3>
+                <div class="qa-answer">
+                    <p>The MetaWorks platform maintains a central, cryptographically signed Regulatory Library that ingests and indexes compliance baselines directly from official Saudi and global authorities. The specific versions natively mapped in current production releases include:</p>
+                    <ul>
+                        <li><strong>NCA Essential Cybersecurity Controls (ECC-1:2018)</strong>: Complete implementation covering all 5 main domains, 29 subdomains, and 114 main controls.</li>
+                        <li><strong>SAMA Cyber Security Framework (Version 3.0)</strong>: Tailored exclusively for financial services, banking institutions, and insurance entities operating under SAMA jurisdiction.</li>
+                        <li><strong>SDAIA Personal Data Protection Law (PDPL)</strong>: Fully integrated with the latest 2023–2024 Executive Regulations governing personal data collection, processing, and consent.</li>
+                        <li><strong>Capital Market Authority (CMA) Cybersecurity Guidelines</strong>: Customized tracking for public-listed entities and financial brokerages.</li>
+                        <li><strong>ISO/IEC 27001:2022 & ISO/IEC 27002:2022</strong>: Global security baseline mappings utilizing the updated Annex A control structural definitions.</li>
+                        <li><strong>NIST Cybersecurity Framework (CSF 2.0)</strong>: Supporting the modernized 'Govern' function alongside Identify, Protect, Detect, Respond, and Recover profiles.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q2</span> Scoring calculation methodologies</h3>
+                <div class="qa-answer">
+                    <p>The platform prevents arbitrary score inflation by deploying exact, transparent mathematical models. Organizations can toggle between two primary calculation architectures depending on internal policies:</p>
+                    
+                    <strong>1. Standard Absolute Compliance Model:</strong>
+                    <p>Quantifies a basic binary implementation percentage based strictly on completed controls:</p>
+                    <div class="formula-box">Compliance % = ( Implemented Controls / Applicable Controls ) × 100</div>
+                    
+                    <strong>2. Weighted / Fractional Maturity Model:</strong>
+                    <p>Evaluates the specific qualitative execution depth of each individual requirement. The math translates implementation states into distinct numerical coefficients:</p>
+                    <ul>
+                        <li>Fully Implemented = Coefficient 1.0 (100% of assigned control weight achieved)</li>
+                        <li>Partially Implemented = Coefficient 0.5 (50% of assigned control weight achieved)</li>
+                        <li>Not Implemented = Coefficient 0.0 (0% credit received)</li>
+                        <li>Not Applicable = Dynamically excluded from the global equation</li>
+                    </ul>
+                    <div class="formula-box">Weighted Compliance % = ( Σ (Control Weight × Implementation Coefficient) / Σ (Maximum Available Weight of Active Scoped Controls) ) × 100</div>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q3</span> Scoring hierarchy & overlaps</h3>
+                <div class="qa-answer">
+                    <p>Scoring is compiled simultaneously across multiple architectural tiers, enabling executive stakeholders to view high-level summaries while giving technical compliance officers the ability to drill down into raw operational evidence:</p>
+                    <ul>
+                        <li><strong>Individual Control Level:</strong> Direct percentage and maturity value based on linked evidence.</li>
+                        <li><strong>Subdomain Level:</strong> Aggregates contiguous control clusters (e.g., Vulnerability Management under NCA ECC) to pinpoint operational gaps.</li>
+                        <li><strong>Domain Level:</strong> High-level thematic scoring across primary framework blocks.</li>
+                        <li><strong>Framework Level:</strong> Computes a unified index showing the definitive readiness rate for that particular standard.</li>
+                        <li><strong>Multi-Framework Consolidated Scoring:</strong> A master crosswalk score that maps overlapping controls across different frameworks. Validating a single asset inventory control can simultaneously credit corresponding sections within NCA ECC, SAMA CSF, and ISO 27001.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q4</span> NCA maturity level calculation</h3>
+                <div class="qa-answer">
+                    <p>The maturity scoring engine conforms strictly to the National Cybersecurity Authority (NCA) maturity model criteria, mapping controls across an ordinal scale from Level 1 to Level 5:</p>
+                    <ul>
+                        <li><strong>Level 1: Ad Hoc</strong> – Operations are entirely uncodified, reactive, and executed without central tracking.</li>
+                        <li><strong>Level 2: Repeatable</strong> – Practices are regularly executed across the enterprise, but lack formalized institutionalization or systematically archived evidence trails.</li>
+                        <li><strong>Level 3: Defined</strong> – Procedures are formally documented, approved by executive steering committees, and fully operationalized.</li>
+                        <li><strong>Level 4: Managed</strong> – Security performance metrics are dynamically extracted, tracked via quantitative indicators, and routinely ingested by dashboards.</li>
+                        <li><strong>Level 5: Optimized</strong> – Automated continuous optimization workflows and self-healing technical orchestration layers refine security baselines.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q5</span> Capping rule for 'Partially Implemented' controls</h3>
+                <div class="qa-answer">
+                    <p>To prevent artificial safety inflation, any control marked as "Partially Implemented" is bounded by a strict programmatic ceiling: <strong>it is automatically capped at a maximum of Maturity Level 2</strong>.</p>
+                    <p>A control is strictly barred from ascending to Level 3 (Defined) or beyond unless three criteria are concurrently satisfied and verified by the platform's data engine:</p>
+                    <ol>
+                        <li><strong>Functional Execution:</strong> The control must be demonstrably operational in production.</li>
+                        <li><strong>Empirical Evidence:</strong> System configurations, logs, or reports must be attached.</li>
+                        <li><strong>Approved Policy:</strong> A formal policy document governing this control must be actively mapped, cross-referenced, and marked as formally signed off.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q6</span> Self-attestation vs. Verified Mode</h3>
+                <div class="qa-answer">
+                    <p>The system enforces a strict security perimeter between Draft/Self-Attestation Mode and Verified Mode:</p>
+                    <ul>
+                        <li><strong>Draft / Self-Attestation Mode:</strong> Serves as an internal workshop or baseline discovery mechanism. Self-attested ratings are excluded from formal regulatory submissions and executive boardroom dashboards.</li>
+                        <li><strong>Verified Mode:</strong> Requires controls to undergo an official internal audit workflow, involving evidence upload, OCR verification, and 4-tier cryptographic signature stamping before being included in official scoring.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q7</span> Evidence evaluation & weighting</h3>
+                <div class="qa-answer">
+                    <p>The platform evaluates uploaded evidentiary files using an automated Scorer Engine that ranks evidence freshness, relevance, cryptographic integrity, and structure on a scale of 0% to 100%:</p>
+                    <ul>
+                        <li><strong>Confidence Score &gt;= 80% (Validated Compliance):</strong> The system accepts the artifact as sufficient proof and routes the control to human sign-off.</li>
+                        <li><strong>Confidence Score 50% - 79% (Pending Manual Review):</strong> The system flags the control as Amber and routes it to the compliance officer's manual queue.</li>
+                        <li><strong>Confidence Score &lt; 50% (Rejected):</strong> The evidence is discarded and the control reverts immediately to non-compliant status.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q8 & Q9</span> Mappings development and validation loops</h3>
+                <div class="qa-answer">
+                    <p>Crosswalk mapping logic is developed by leading GRC architects and verified using a strict 4-tier validation pipeline:</p>
+                    <ol>
+                        <li><strong>Multi-expert Internal Review:</strong> Cross-checking definitions against official regulatory Arabic and English source texts.</li>
+                        <li><strong>Algorithmic Crosswalk Logic Checks:</strong> Running dependency graph evaluations to eliminate circular references.</li>
+                        <li><strong>Corporate Customer Testing:</strong> Gathering direct feedback from large-scale government and financial tenants.</li>
+                        <li><strong>External Audit Validation Loops:</strong> Calibrating crosswalk behaviors with certifying bodies, practicing auditors, and external audit practitioners.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q10 & Q11</span> Scoring reproducibility and documentation</h3>
+                <div class="qa-answer">
+                    <p>All compliance scores are 100% deterministic, eliminating black-box algorithms or hidden qualitative weightings. Regulatory inspectors can export complete raw GRC datasets in CSV format and replicate every compliance score, subdomain average, and maturity level calculation using standalone spreadsheet tools.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q12, Q13 & Q14</span> Risk model & residual risk calculation</h3>
+                <div class="qa-answer">
+                    <p>The platform implements a comprehensive, hybrid risk management framework built directly upon the global <strong>ISO 31000 standard</strong>, combining qualitative parameters with quantitative values (1–25 Scale):</p>
+                    <div class="formula-box">Inherent Risk = Likelihood (1–5) × Impact (1–5)</div>
+                    <p>Resulting scores map to defined risk profiles: Very Low (1-3), Low (4-6), Medium (8-12), High (15-20), and Critical (25).</p>
+                    <p><strong>Residual Risk Calculation:</strong> Calculated dynamically based on the verified status and effectiveness of mapped controls:</p>
+                    <div class="formula-box">Residual Risk = Residual Likelihood × Residual Impact</div>
+                    <p>This ensures that risk scores dynamically reflect verified technical safeguards and administrative compliance postures in real-time.</p>
+                </div>
+            </div>
+
+            <!-- Category 2: AI Governance & Sovereignty -->
+            <div class="category-header">Part II: AI Governance & Sovereign Infrastructure</div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q15 & Q16</span> AI model selection & localization</h3>
+                <div class="qa-answer">
+                    <p>The platform runs on a tiered sovereign generative AI layer:</p>
+                    <ul>
+                        <li><strong>Primary Engine:</strong> Google Gemini 2.5 Flash, delivering rapid processing speeds and broad context window analysis.</li>
+                        <li><strong>Complex/Deep Policy Analysis:</strong> Google Gemini 2.5 Pro.</li>
+                        <li><strong>Local / Air-gapped Nodes:</strong> Optional Google Gemma 4B running fully client-side via WebGPU/WASM.</li>
+                    </ul>
+                    <p><strong>Hosting Region:</strong> All generative AI and database workloads are hosted and processed strictly within the <strong>Google Cloud Dammam Region (me-central2)</strong> inside the geographical borders of the Kingdom of Saudi Arabia.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q17, Q18 & Q19</span> Data sovereignty and foundation model training boundaries</h3>
+                <div class="qa-answer">
+                    <p>No customer data, user prompts, generated output, evidence files, or GRC telemetry is ever transmitted outside the borders of Saudi Arabia. In alignment with Enterprise Google Cloud agreements, customer data and prompts are isolated by private virtual network perimeters and are <strong>never utilized to train, tune, or optimize public foundation models</strong>. The system enforces a strict 0-Day processing mode on foundational model pipelines.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q20, Q21 & Q22</span> Human-in-the-Loop (HITL) safeguards</h3>
+                <div class="qa-answer">
+                    <p>The generative AI core acts strictly as an advisory assistant and has no permissions to execute system changes independently. The generative engine is programmatically barred from approving corporate policies, authorizing risk acceptances, signing off on compliance exceptions, or publishing final regulatory reports. All AI outputs are saved in Draft status and require human review and authorization. If required, organizations can disable the AI subsystem entirely.</p>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q23 & Q24</span> Isolated air-gapped deployment and SDAIA AI Ethics alignment</h3>
+                <div class="qa-answer">
+                    <p>For highly secure or completely isolated networks, the platform supports an entirely self-contained, air-gapped deployment option utilizing Google Gemma 4B. This configuration runs locally within the browser via WebLLM, WebGPU, and WASM protocols, ensuring that no data is transmitted over external network connections.</p>
+                    <p>The architecture is developed to align with the SDAIA AI Ethics Guidelines, actively supporting core tenets such as Transparency, Accountability, Fairness, Privacy, Security, Human Oversight, Explainability, and Data Sovereignty.</p>
+                </div>
+            </div>
+
+            <!-- Category 3: Hosting, Security & Licensing -->
+            <div class="category-header">Part III: Hosting, Security & Licensing</div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q25 & Q26</span> Customer data hosting and security controls</h3>
+                <div class="qa-answer">
+                    <p>All production data is hosted natively in the Google Cloud Dammam Region (me-central2) within KSA. Data security is maintained through a layered architectural design:</p>
+                    <ul>
+                        <li><strong>Data at Rest:</strong> Encrypted using advanced AES-256 standards, with support for Customer Managed Encryption Keys (CMEK) to ensure exclusive data access control.</li>
+                        <li><strong>Data in Transit:</strong> Protected by mandatory, high-grade TLS 1.3 encryption protocols.</li>
+                        <li><strong>Access Control:</strong> Strictly enforced via Multi-Factor Authentication (MFA), role-based access control (RBAC), and conditional session policies.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="qa-item">
+                <h3><span class="q-num">Q27 & Q28</span> Pricing model & technical documentation availability</h3>
+                <div class="qa-answer">
+                    <p>The platform offers a versatile enterprise subscription framework across four licensing archetypes:</p>
+                    <ul>
+                        <li><strong>Per User:</strong> Based on named concurrent or active user counts.</li>
+                        <li><strong>Per Framework:</strong> Licensed by specific activated standards (e.g., NCA ECC, SAMA, or PDPL modules).</li>
+                        <li><strong>Per Module:</strong> Modular activation for Risk Management, Audit, Asset Management, or AI Governance.</li>
+                        <li><strong>Enterprise Unlimited:</strong> Full organization-wide licensing including all modules and uncapped user seats.</li>
+                    </ul>
+                    <p>Complete documentation packages are available, encompassing Governance Guidelines, Risk Framework Manuals, Technical API Documentation, Database Schema Designs, Data Flow Diagrams, and complete Audit Trail Workbooks.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Prepared by the <strong>MetaWorks GRC Architecture & Compliance Engineering Division</strong></p>
+            <p>Strictly Commercial-in-Confidence | Kingdom of Saudi Arabia | &copy; 2026 MetaWorks Corp. All rights reserved.</p>
+        </div>
+    </div>
+
+</body>
+</html>

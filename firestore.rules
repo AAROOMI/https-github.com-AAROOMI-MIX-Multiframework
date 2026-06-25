@@ -109,6 +109,21 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /assessments/{assessmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /risk_register/{riskId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /immutable_audit_ledger/{ledgerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     match /companies/{companyId} {
       allow read: if companyId == 'demo-company' || isCompanyMember(companyId);
       allow write: if isCompanyMember(companyId);

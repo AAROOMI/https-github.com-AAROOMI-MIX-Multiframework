@@ -14,6 +14,7 @@ import { AssessmentPage } from './components/AssessmentPage';
 import { PDPLAssessmentPage } from './components/PDPLAssessmentPage';
 import { SamaCsfAssessmentPage } from './components/SamaCsfAssessmentPage';
 import { CMAAssessmentPage } from './components/CMAAssessmentPage';
+import { NcaFamilySuitePage } from './components/NcaFamilySuitePage';
 import { UserProfilePage } from './components/UserProfilePage';
 import { HelpSupportPage } from './components/HelpSupportPage';
 import { TrainingPage } from './components/TrainingPage';
@@ -39,6 +40,7 @@ import { RiskAssistant } from './components/RiskAssistant';
 import { BreadcrumbReferenceSheet } from './components/BreadcrumbReferenceSheet';
 import { AccordionShowcase } from './components/AccordionShowcase';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { FeatureToggleProvider } from './context/FeatureToggleContext';
 import { motion } from 'motion/react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -46,6 +48,7 @@ import { eccData } from './data/controls';
 import { dbAPI } from './db';
 import { virtualAgents } from './data/virtualAgents';
 import { translations } from './translations';
+import { trainingCourses } from './data/trainingData';
 import { 
   rolePermissions, 
   type User, 
@@ -67,7 +70,8 @@ import {
   type VirtualAgent,
   type Asset,
   type PolicyTone,
-  type PolicyLength
+  type PolicyLength,
+  type TrainingCourse
 } from './types';
 
 export default function App() {
@@ -78,6 +82,7 @@ export default function App() {
   });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState<View>('creatorMarketplace');
+  const [selectedNcaFrameworkId, setSelectedNcaFrameworkId] = useState<string>('ecc-2.0');
   const [isLoading, setIsLoading] = useState(true);
   
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
@@ -131,6 +136,7 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [agentLog, setAgentLog] = useState<AgentLogEntry[]>([]);
   const [trainingProgress, setTrainingProgress] = useState<UserTrainingProgress>({});
+  const [courses, setCourses] = useState<TrainingCourse[]>(trainingCourses);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [assessmentStatuses, setAssessmentStatuses] = useState<Record<string, string>>({});
 
@@ -583,6 +589,152 @@ export default function App() {
       }
   };
 
+  const handleGenerateCmaDocuments = async (item: AssessmentItem) => {
+      if (!company) return;
+      
+      const isArabic = language === 'ar';
+      const prompt = `
+        You are an elite Saudi Capital Market Authority (CMA) Cybersecurity Compliance officer. 
+        Generate a comprehensive, regulator-grade compliance pack for the following CMA Cybersecurity Control:
+        Control Code: ${item.controlCode}
+        Control Name: ${item.controlName}
+        Domain: ${item.domainName}
+        Subdomain: ${item.subdomainName}
+        Current Status: ${item.controlStatus}
+        Mapped Standards: NCA: ${item.mappedStandards?.nca || 'N/A'}, SAMA: ${item.mappedStandards?.sama || 'N/A'}, ISO: ${item.mappedStandards?.iso || 'N/A'}, NIST: ${item.mappedStandards?.nist || 'N/A'}
+        
+        Generate:
+        1. A formal Cybersecurity Policy (policy) specifying regulatory mandates in the KSA capital markets context.
+        2. A comprehensive operating Procedure (procedure) for administrative and technical execution.
+        3. Compliance Guidelines (guideline) for daily business operations.
+        4. An interactive, engaging Employee Security Awareness Manual (awarenessManual) explaining this control, its importance, real-world capital-market threat vectors (e.g., social engineering, phishing, data leaks, insider trading), and secure corporate behavior.
+        5. Interactive quiz title (quizTitle).
+        6. A JSON string representing 2-3 multiple choice questions (quizQuestionsJson). Each question must be an object with:
+           - question: string
+           - options: array of 3 strings
+           - correctAnswer: number (0, 1, or 2)
+        
+        Language: ${isArabic ? 'Arabic (اللغة العربية الفصحى)' : 'English'}
+        Format strictly as JSON with keys: 'policy', 'procedure', 'guideline', 'awarenessManual', 'quizTitle', 'quizQuestionsJson'. Do not add any markdown formatting outside the JSON object.
+      `;
+
+      try {
+          const response = await AIService.generateStructuredContent<{
+              policy: string;
+              procedure: string;
+              guideline: string;
+              awarenessManual?: string;
+              quizTitle?: string;
+              quizQuestionsJson?: string;
+          }>(prompt, { 
+              policy: 'string', 
+              procedure: 'string', 
+              guideline: 'string',
+              awarenessManual: 'string',
+              quizTitle: 'string',
+              quizQuestionsJson: 'string'
+          });
+          
+          if (!response) throw new Error("Empty response from AI Service");
+          
+          const content: GeneratedContent = {
+              policy: response.policy,
+              procedure: response.procedure,
+              guideline: response.guideline,
+              awarenessManual: response.awarenessManual
+          };
+          
+          const newDoc: PolicyDocument = {
+              id: `doc-${Date.now()}`,
+              controlId: item.controlCode,
+              domainName: item.domainName,
+              subdomainTitle: item.subdomainName,
+              controlDescription: item.controlName,
+              status: 'Draft',
+              content: content,
+              approvalHistory: [],
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              generatedBy: 'AI Agent'
+          };
+          
+          setDocuments(prev => [...prev, newDoc]);
+          dbAPI.saveDocument(company.id, newDoc);
+          
+          // Add to training courses if awarenessManual is generated
+          if (response.awarenessManual) {
+              let parsedQuestions = [];
+              try {
+                  if (response.quizQuestionsJson) {
+                      const cleanJson = response.quizQuestionsJson.trim();
+                      const parsed = JSON.parse(cleanJson);
+                      parsedQuestions = Array.isArray(parsed) ? parsed : [];
+                  }
+              } catch (err) {
+                  console.warn("Could not parse AI-generated quiz questions, falling back to default.", err);
+              }
+
+              if (parsedQuestions.length === 0) {
+                  parsedQuestions = [
+                      {
+                          question: `What is the primary objective of CMA control ${item.controlCode}?`,
+                          options: [
+                              `To ensure compliance with CMA cybersecurity mandates`,
+                              `To bypass regulatory audits`,
+                              `To reduce hardware cost`
+                          ],
+                          correctAnswer: 0
+                      }
+                  ];
+              }
+
+              const newLesson = {
+                  id: `lesson-${item.controlCode.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                  title: `${item.controlCode}: Compliance Awareness`,
+                  content: response.awarenessManual,
+                  quiz: {
+                      title: response.quizTitle || `${item.controlCode} Quick Check`,
+                      questions: parsedQuestions
+                  }
+              };
+
+              setCourses(prevCourses => {
+                  const existingCmaCourse = prevCourses.find(c => c.id === 'course-cma-awareness');
+                  let updatedCourses;
+                  if (existingCmaCourse) {
+                      const lessonExists = existingCmaCourse.lessons.some(l => l.id === newLesson.id);
+                      const updatedLessons = lessonExists 
+                          ? existingCmaCourse.lessons.map(l => l.id === newLesson.id ? newLesson : l)
+                          : [...existingCmaCourse.lessons, newLesson];
+                          
+                      updatedCourses = prevCourses.map(c => c.id === 'course-cma-awareness' 
+                          ? { ...c, lessons: updatedLessons }
+                          : c
+                      );
+                  } else {
+                      const newCourse: TrainingCourse = {
+                          id: 'course-cma-awareness',
+                          title: 'CMA Cybersecurity Compliance & Awareness',
+                          description: 'Interactive security awareness courses generated directly from your CMA compliance manuals and policies.',
+                          standard: 'CMA Cybersecurity Guidelines',
+                          badgeId: 'cma-awareness-badge',
+                          lessons: [newLesson]
+                      };
+                      updatedCourses = [...prevCourses, newCourse];
+                  }
+                  return updatedCourses;
+              });
+          }
+          
+          addNotification(`Compliance Pack for ${item.controlCode} generated successfully, and Employee Awareness Lesson has been added to the Training Library!`, 'success');
+          handleAddAuditLog('DOCUMENT_GENERATED', `AI generated CMA compliance pack and awareness manual for ${item.controlCode}`);
+          
+      } catch (error) {
+          console.error("AI Generation Error", error);
+          addNotification("Failed to generate compliance pack.", "error");
+      }
+  };
+
   const handleAddDocument = (control: Control, subdomain: Subdomain, domain: Domain, generatedContent: GeneratedContent) => {
       if (!company) return;
       const newDoc: PolicyDocument = {
@@ -682,7 +834,8 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className={`flex h-screen bg-slate-100 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 ${theme}`}>
+      <FeatureToggleProvider currentUser={currentUser} company={company} addAuditLog={handleAddAuditLog}>
+        <div className={`flex h-screen bg-slate-100 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 ${theme}`}>
       <Sidebar 
         domains={eccData} 
         selectedDomain={selectedDomain} 
@@ -694,6 +847,8 @@ export default function App() {
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         language={language}
+        selectedNcaFrameworkId={selectedNcaFrameworkId}
+        onSelectNcaFrameworkId={setSelectedNcaFrameworkId}
       />
       
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
@@ -1009,6 +1164,15 @@ export default function App() {
                     }}
                     permissions={permissions}
                     onGenerateReport={() => {}}
+                    onGenerateCmaDocuments={handleGenerateCmaDocuments}
+                />
+            )}
+            {currentView === 'ncaFamilySuite' && (
+                <NcaFamilySuitePage 
+                    language={language}
+                    addAuditLog={handleAddAuditLog}
+                    selectedFwId={selectedNcaFrameworkId}
+                    onSelectFwId={setSelectedNcaFrameworkId}
                 />
             )}
             {currentView === 'userProfile' && (
@@ -1022,6 +1186,7 @@ export default function App() {
             {currentView === 'help' && <HelpSupportPage onStartTour={() => setShowTour(true)} language={language} />}
             {currentView === 'training' && (
                 <TrainingPage 
+                    courses={courses}
                     userProgress={trainingProgress}
                     onUpdateProgress={(cId, lId, score) => {
                         const newProgress = { ...trainingProgress };
@@ -1095,6 +1260,7 @@ export default function App() {
                     currentUser={currentUser} 
                     forceLocalLLM={forceLocalLLM}
                     onToggleLocalLLM={toggleLocalLLM}
+                    addAuditLog={handleAddAuditLog}
                 />
             )}
             {currentView === 'integrations' && (
@@ -1218,6 +1384,7 @@ export default function App() {
         {showMfaSetup && <MfaSetupPage user={currentUser} companyName={company.name} onVerified={handleMfaVerify} onCancel={() => setShowMfaSetup(false)} theme={theme} toggleTheme={() => {}} />}
       </main>
     </div>
+    </FeatureToggleProvider>
     </ErrorBoundary>
   );
 }

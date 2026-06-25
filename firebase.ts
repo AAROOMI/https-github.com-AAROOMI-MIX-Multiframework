@@ -1,7 +1,6 @@
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDocFromServer } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 
 
@@ -19,7 +18,8 @@ export const db = (firebaseConfig as any).firestoreDatabaseId
 export const auth = getAuth(app);
 
 // Initialize Analytics
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+let analyticsInstance = null;
+export const analytics = analyticsInstance;
 
 export { firebaseConfig };
 

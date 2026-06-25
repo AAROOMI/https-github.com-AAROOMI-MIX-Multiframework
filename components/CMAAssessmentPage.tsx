@@ -93,9 +93,10 @@ interface CMAAssessmentPageProps {
     onComplete: () => void;
     permissions: Set<Permission>;
     onGenerateReport: (summary: string) => void;
+    onGenerateCmaDocuments?: (item: AssessmentItem) => Promise<void>;
 }
 
-export const CMAAssessmentPage: React.FC<CMAAssessmentPageProps> = ({ assessmentData, onUpdateItem, status, onInitiate, onComplete, permissions, onGenerateReport }) => {
+export const CMAAssessmentPage: React.FC<CMAAssessmentPageProps> = ({ assessmentData, onUpdateItem, status, onInitiate, onComplete, permissions, onGenerateReport, onGenerateCmaDocuments }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<ControlStatus | 'All'>('All');
     const [domainFilter, setDomainFilter] = useState('All');
@@ -406,6 +407,7 @@ export const CMAAssessmentPage: React.FC<CMAAssessmentPageProps> = ({ assessment
                 canUpdate={canUpdate}
                 activeControlCode={activeControlCode}
                 activeField={activeField}
+                onGenerateCmaDocuments={onGenerateCmaDocuments}
             />
 
             {/* Headless AI Assistant */}

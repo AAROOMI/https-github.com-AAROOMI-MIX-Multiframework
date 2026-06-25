@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DocumentIcon, UsersIcon, BuildingOfficeIcon, DashboardIcon, ClipboardListIcon, BeakerIcon, ClipboardCheckIcon, ShieldKeyholeIcon, LandmarkIcon, IdentificationIcon, QuestionMarkCircleIcon, GraduationCapIcon, ExclamationTriangleIcon, LineChartIcon, SparklesIcon, ShieldCheckIcon, ChatBotIcon, SunIcon, MoonIcon, LinkIcon, BugAntIcon, UserGroupIcon, PhoneIcon, LayoutIcon } from './Icons';
 import type { Domain, Permission, View, UserTrainingProgress } from '../types';
+import { useFeatureToggles } from '../context/FeatureToggleContext';
 import { virtualAgents } from '../data/virtualAgents';
 import { trainingCourses } from '../data/trainingData';
 import { translations } from '../translations';
@@ -19,6 +20,8 @@ interface SidebarProps {
   language?: 'en' | 'ar';
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
+  selectedNcaFrameworkId?: string;
+  onSelectNcaFrameworkId?: (fwId: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -31,9 +34,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   trainingProgress, 
   language = 'en',
   isMobileOpen = false,
-  onCloseMobile
+  onCloseMobile,
+  selectedNcaFrameworkId,
+  onSelectNcaFrameworkId
 }) => {
   const t = translations[language];
+  const { isMenuEnabled } = useFeatureToggles();
 
   const handleNavClick = (view: View) => {
     onSetView(view);
@@ -123,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
          </button>
       </li>
 
-      {permissions.has('dashboard:read') && (
+      {permissions.has('dashboard:read') && isMenuEnabled('dashboard') && (
         <li>
           <button
               id="sidebar-dashboard"
@@ -141,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Virtual Department Section */}
-      {permissions.has('virtualDept:manage') && (
+      {permissions.has('virtualDept:manage') && isMenuEnabled('virtualDepartment') && (
         <li className="mt-6 mb-4">
            <div className="px-3 mb-2 flex items-center justify-between">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">{language === 'ar' ? 'إدارة مجلس الحوكمة الافتراضي' : 'Virtual GRC Dept'}</span>
@@ -271,7 +277,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('users:read') && (
+      {permissions.has('users:read') && isMenuEnabled('userManagement') && (
         <li>
           <button
               onClick={() => handleNavClick('userManagement')}
@@ -287,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('company:read') && (
+      {permissions.has('company:read') && isMenuEnabled('companyProfile') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('companyProfile')}
@@ -303,7 +309,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('userProfile:read') && (
+      {permissions.has('userProfile:read') && isMenuEnabled('userProfile') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('userProfile')}
@@ -319,7 +325,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('assets:read') && (
+      {permissions.has('assets:read') && isMenuEnabled('assets') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('assets')}
@@ -335,7 +341,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('integrations:manage') && (
+      {permissions.has('integrations:manage') && isMenuEnabled('integrations') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('integrations')}
@@ -351,7 +357,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('vapt:manage') && (
+      {permissions.has('vapt:manage') && isMenuEnabled('vapt') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('vapt')}
@@ -367,7 +373,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('documents:read') && (
+      {permissions.has('documents:read') && isMenuEnabled('documents') && (
         <li className="mt-1">
           <button
               id="sidebar-documents"
@@ -385,7 +391,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
       
       {/* Security Awareness Section */}
-      {permissions.has('training:read') && (
+      {permissions.has('training:read') && isMenuEnabled('training') && (
         <li className="mt-5 mb-2">
            <div className="px-3 mb-2 flex items-center justify-between">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">Security Awareness</span>
@@ -430,7 +436,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('riskAssessment:read') && (
+      {permissions.has('riskAssessment:read') && isMenuEnabled('riskAssessment') && (
         <li className="mt-1">
           <button
               id="sidebar-riskAssessment"
@@ -447,7 +453,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('assessment:read') && (
+      {permissions.has('assessment:read') && isMenuEnabled('assessment') && (
         <li className="mt-1">
           <button
               id="sidebar-assessment"
@@ -464,7 +470,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('pdplAssessment:read') && (
+      {permissions.has('pdplAssessment:read') && isMenuEnabled('pdplAssessment') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('pdplAssessment')}
@@ -480,7 +486,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('samaCsfAssessment:read') && (
+      {permissions.has('samaCsfAssessment:read') && isMenuEnabled('samaCsfAssessment') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('samaCsfAssessment')}
@@ -496,7 +502,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('cmaAssessment:read') && (
+      {permissions.has('cmaAssessment:read') && isMenuEnabled('cmaAssessment') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('cmaAssessment')}
@@ -512,7 +518,60 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('audit:read') && (
+      {permissions.has('assessment:read') && (
+        <li className="mt-1">
+          <button
+              onClick={() => handleNavClick('ncaFamilySuite')}
+              className={`w-full text-left p-3 rounded-md text-[13px] transition-all duration-300 flex items-center group relative overflow-hidden ${
+                currentView === 'ncaFamilySuite'
+                  ? 'bg-teal-50 dark:bg-white/10 text-teal-600 dark:text-white font-normal border border-teal-500/20 dark:border-white/10 shadow-lg'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white/80 hover:bg-slate-100 dark:hover:bg-white/5'
+              }`}
+            >
+              <ShieldCheckIcon className={`w-5 h-5 mr-3 transition-colors ${currentView === 'ncaFamilySuite' ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-teal-600 dark:group-hover:text-teal-400/70'}`} />
+              <span className="font-normal text-teal-700 dark:text-teal-300">{language === 'ar' ? 'عائلة إطارات NCA' : 'NCA Framework Family'}</span>
+            </button>
+            
+            {currentView === 'ncaFamilySuite' && (
+              <ul className="mt-1 ml-4 pl-3 border-l border-teal-500/30 space-y-1">
+                {[
+                  { id: 'ecc-2.0', name: 'NCA ECC 2.0 (200 Controls)', nameAr: 'إي سي سي 2.0 (200 ضابط)' },
+                  { id: 'ecc-175', name: 'NCA ECC (175 Controls)', nameAr: 'إي سي سي (175 ضابط)' },
+                  { id: 'dcc-66', name: 'NCA DCC (66 Controls)', nameAr: 'دي سي سي (66 ضابط)' },
+                  { id: 'cscc-105', name: 'NCA CSCC (105 Controls)', nameAr: 'سي إس سي سي (105 ضابط)' },
+                  { id: 'otcc-169', name: 'NCA OTCC (169 Controls)', nameAr: 'أو تي سي سي (169 ضابط)' },
+                  { id: 'osmacc-53', name: 'OSMACC (53 Controls)', nameAr: 'أوسماك (53 ضابط)' },
+                  { id: 'ncs-100', name: 'NCA NCS (100 Controls)', nameAr: 'إن سي إس (100 ضابط)' },
+                  { id: 'tcc-63', name: 'NCA TCC (63 Controls)', nameAr: 'تي سي سي (63 ضابط)' },
+                  { id: 'ncnicc-65', name: 'NCNICC (65 Controls)', nameAr: 'إن سي إن آي سي سي (65 ضابط)' },
+                ].map((item) => {
+                  const isItemActive = selectedNcaFrameworkId === item.id;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => {
+                          if (onSelectNcaFrameworkId) {
+                            onSelectNcaFrameworkId(item.id);
+                          }
+                          onSetView('ncaFamilySuite');
+                        }}
+                        className={`w-full text-left py-1.5 px-2 rounded-md text-[11px] transition-all duration-150 flex items-center font-normal ${
+                          isItemActive
+                            ? 'bg-teal-50/50 dark:bg-white/5 text-teal-600 dark:text-teal-400 font-normal'
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 font-normal'
+                        }`}
+                      >
+                        <span className="truncate">{language === 'ar' ? item.nameAr : item.name}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+        </li>
+      )}
+
+      {permissions.has('audit:read') && isMenuEnabled('auditLog') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('auditLog')}
@@ -528,7 +587,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('assessment:update') && (
+      {permissions.has('assessment:update') && isMenuEnabled('liveVoiceDemo') && (
         <li className="mt-1">
           <button
               id="sidebar-liveVoiceDemo"
@@ -545,7 +604,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </li>
       )}
 
-      {permissions.has('assessment:update') && (
+      {permissions.has('assessment:update') && isMenuEnabled('complianceAgent') && (
         <li className="mt-1">
           <button
               onClick={() => handleNavClick('complianceAgent')}

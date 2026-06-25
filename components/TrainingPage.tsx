@@ -11,6 +11,7 @@ import { SparklesIcon, GraduationCapIcon } from './Icons';
 interface TrainingPageProps {
   userProgress: UserTrainingProgress;
   onUpdateProgress: (courseId: string, lessonId: string, score?: number) => void;
+  courses?: TrainingCourse[];
 }
 
 const CourseCard: React.FC<{ course: TrainingCourse; progress?: UserTrainingProgress[string] }> = ({ course, progress }) => {
@@ -64,7 +65,7 @@ const ScenarioCard: React.FC<{ scenario: StoryScenario }> = ({ scenario }) => {
     );
 };
 
-export const TrainingPage: React.FC<TrainingPageProps> = ({ userProgress, onUpdateProgress }) => {
+export const TrainingPage: React.FC<TrainingPageProps> = ({ userProgress, onUpdateProgress, courses = trainingCourses }) => {
     const [activeTab, setActiveTab] = useState<'courses' | 'scenarios'>('courses');
     const [activeCourse, setActiveCourse] = useState<TrainingCourse | null>(null);
     const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
@@ -142,7 +143,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({ userProgress, onUpda
 
             {activeTab === 'courses' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                    {trainingCourses.map(course => (
+                    {courses.map(course => (
                         <button key={course.id} onClick={() => handleSelectCourse(course)} className="text-left focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 rounded-lg">
                             <CourseCard course={course} progress={userProgress[course.id]} />
                         </button>

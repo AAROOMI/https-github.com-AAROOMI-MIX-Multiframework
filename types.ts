@@ -361,6 +361,7 @@ export interface GeneratedContent {
   policy: string;
   procedure: string;
   guideline: string;
+  awarenessManual?: string;
 }
 
 export type PolicyTone = 'Standard' | 'Formal' | 'Strict' | 'Educational';
@@ -467,6 +468,12 @@ export interface AssessmentItem {
   recommendation: string;
   managementResponse: string;
   targetDate: string;
+  mappedStandards?: {
+    nca?: string;
+    sama?: string;
+    iso?: string;
+    nist?: string;
+  };
   evidence?: {
     fileName: string;
     dataUrl: string; // base64 data URL
@@ -497,7 +504,7 @@ export interface TrainingCourse {
   id:string;
   title: string;
   description: string;
-  standard: 'NCA ECC' | 'PDPL' | 'SAMA CSF' | 'ISO 27001';
+  standard: 'NCA ECC' | 'PDPL' | 'SAMA CSF' | 'ISO 27001' | 'CMA Cybersecurity Guidelines';
   lessons: Lesson[];
   badgeId: string;
 }
@@ -774,6 +781,7 @@ export type View =
   | 'pdplAssessment' 
   | 'samaCsfAssessment' 
   | 'cmaAssessment' 
+  | 'ncaFamilySuite' 
   | 'userProfile' 
   | 'help' 
   | 'training' 

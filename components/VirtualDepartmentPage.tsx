@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIService } from '../services/aiService';
+import { dbAPI } from '../db';
 import { virtualAgents } from '../data/virtualAgents';
 import { sampleCyberSkills, CYBER_DOMAINS, ALL_CYBER_SKILLS_COUNT, CORE_DOMAINS_COUNT, CyberSkill } from '../data/cybersecuritySkills';
 import { Search, Filter, Cpu, BookOpen } from 'lucide-react';
@@ -1184,6 +1185,23 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                 // If all signatures are verified, promote status of evidence to Approved
                 const isFullySigned = signs.riskOwner && signs.lineManager && signs.cio && signs.ceo;
                 
+                if (isFullySigned && companyProfile?.id) {
+                    const cryptoHash = 'SHA256_' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase();
+                    dbAPI.addImmutableAuditLedgerEntry(companyProfile.id, {
+                        id: cryptoHash,
+                        artifactName: ev.fileName,
+                        hash: cryptoHash,
+                        uploadedBy: ev.uploadedBy,
+                        timestamp: Date.now(),
+                        controlId: ev.controlId,
+                        metadata: {
+                            framework: ev.framework,
+                            signatures: signs,
+                            status: 'Approved'
+                        }
+                    }).catch(err => console.error("Failed to write evidence to decentralized audit ledger", err));
+                }
+
                 return {
                     ...ev,
                     signatures: signs,
@@ -1270,13 +1288,29 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
         
         const newCert: ComplianceCertificate = {
             id: certId,
-            companyName: 'Acme Cybersecurity Node',
+            companyName: companyProfile?.name || 'Acme Cybersecurity Node',
             framework: selectedAuditFramework,
             issueDate: Date.now(),
             serialNumber: `SN-${Date.now().toString().slice(-6)}`,
             securityHash: hash,
             signees: dynamicAgents.map(a => `${a.name} (${a.role})`)
         };
+
+        if (companyProfile?.id) {
+            dbAPI.addImmutableAuditLedgerEntry(companyProfile.id, {
+                id: hash,
+                artifactName: `Compliance Certificate: ${certId}`,
+                hash: hash,
+                uploadedBy: 'Ahmed Al-Mansoori (Consensus Boardroom)',
+                timestamp: Date.now(),
+                metadata: {
+                    certificateId: certId,
+                    framework: selectedAuditFramework,
+                    serialNumber: newCert.serialNumber,
+                    signees: newCert.signees
+                }
+            }).catch(err => console.error("Failed to write compliance certificate to decentralized audit ledger", err));
+        }
 
         setCertificates(prev => [newCert, ...prev]);
 

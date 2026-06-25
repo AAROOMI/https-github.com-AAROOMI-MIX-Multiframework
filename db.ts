@@ -684,12 +684,50 @@ export const dbAPI = {
         if (companyId === DEMO_ID || isDemoMode()) return;
         await ensureAuth();
         await setDoc(doc(db, `companies/${companyId}/documents`, document.id), cleanObject(document));
+        
+        // If document is cryptographically sealed, write to centralized immutable_audit_ledger
+        if (document.cryptographicSeal) {
+            await setDoc(doc(db, 'immutable_audit_ledger', document.cryptographicSeal.hash), {
+                id: document.cryptographicSeal.hash,
+                companyId,
+                artifactName: document.subdomainTitle,
+                hash: document.cryptographicSeal.hash,
+                uploadedBy: 'CISO / CEO / CTO Multilateral Seal',
+                timestamp: document.cryptographicSeal.timestamp,
+                metadata: {
+                    type: 'document_seal',
+                    signatureCISO: document.cryptographicSeal.signatureCISO,
+                    signatureCTO: document.cryptographicSeal.signatureCTO,
+                    signatureCEO: document.cryptographicSeal.signatureCEO
+                },
+                createdAt: Date.now()
+            });
+        }
     },
 
     async updateDocument(companyId: string, document: PolicyDocument): Promise<void> {
         if (companyId === DEMO_ID || isDemoMode()) return;
         await ensureAuth();
         await updateDoc(doc(db, `companies/${companyId}/documents`, document.id), cleanObject(document));
+        
+        // If document is cryptographically sealed, write to centralized immutable_audit_ledger
+        if (document.cryptographicSeal) {
+            await setDoc(doc(db, 'immutable_audit_ledger', document.cryptographicSeal.hash), {
+                id: document.cryptographicSeal.hash,
+                companyId,
+                artifactName: document.subdomainTitle,
+                hash: document.cryptographicSeal.hash,
+                uploadedBy: 'CISO / CEO / CTO Multilateral Seal',
+                timestamp: document.cryptographicSeal.timestamp,
+                metadata: {
+                    type: 'document_seal',
+                    signatureCISO: document.cryptographicSeal.signatureCISO,
+                    signatureCTO: document.cryptographicSeal.signatureCTO,
+                    signatureCEO: document.cryptographicSeal.signatureCEO
+                },
+                createdAt: Date.now()
+            });
+        }
     },
 
     async addAuditLog(companyId: string, entry: AuditLogEntry): Promise<void> {
@@ -726,24 +764,68 @@ export const dbAPI = {
         if (companyId === DEMO_ID || isDemoMode()) return;
         await ensureAuth();
         await setDoc(doc(db, `companies/${companyId}/assessments`, type), { items: cleanObject(items) });
+        
+        // Write to centralized assessments collection schema as instructed
+        await setDoc(doc(db, 'assessments', `${companyId}-${type}`), {
+            id: `${companyId}-${type}`,
+            companyId,
+            type,
+            items: cleanObject(items),
+            updatedAt: Date.now()
+        });
     },
 
     async addRisk(companyId: string, risk: Risk): Promise<void> {
         if (companyId === DEMO_ID || isDemoMode()) return;
         await ensureAuth();
         await setDoc(doc(db, `companies/${companyId}/risks`, risk.id), cleanObject(risk));
+        
+        // Write to centralized risk_register collection schema as instructed
+        await setDoc(doc(db, 'risk_register', `${companyId}-${risk.id}`), {
+            ...cleanObject(risk),
+            companyId,
+            updatedAt: Date.now()
+        });
     },
 
     async updateRisk(companyId: string, risk: Risk): Promise<void> {
         if (companyId === DEMO_ID || isDemoMode()) return;
         await ensureAuth();
         await updateDoc(doc(db, `companies/${companyId}/risks`, risk.id), cleanObject(risk));
+        
+        // Write to centralized risk_register collection schema as instructed
+        await setDoc(doc(db, 'risk_register', `${companyId}-${risk.id}`), {
+            ...cleanObject(risk),
+            companyId,
+            updatedAt: Date.now()
+        });
     },
 
     async deleteRisk(companyId: string, riskId: string): Promise<void> {
         if (companyId === DEMO_ID || isDemoMode()) return;
         await ensureAuth();
         await deleteDoc(doc(db, `companies/${companyId}/risks`, riskId));
+        
+        // Remove from centralized risk_register collection schema as instructed
+        await deleteDoc(doc(db, 'risk_register', `${companyId}-${riskId}`));
+    },
+
+    async addImmutableAuditLedgerEntry(companyId: string, entry: {
+        id: string;
+        artifactName: string;
+        hash: string;
+        uploadedBy: string;
+        timestamp: number;
+        controlId?: string;
+        metadata?: any;
+    }): Promise<void> {
+        if (companyId === DEMO_ID || isDemoMode()) return;
+        await ensureAuth();
+        await setDoc(doc(db, 'immutable_audit_ledger', entry.id), {
+            ...cleanObject(entry),
+            companyId,
+            createdAt: Date.now()
+        });
     },
 
     async addAsset(companyId: string, asset: Asset): Promise<void> {
