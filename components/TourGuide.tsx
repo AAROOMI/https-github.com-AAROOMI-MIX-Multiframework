@@ -28,6 +28,13 @@ export const TourGuide: React.FC<TourGuideProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+
+  // Voice-First Mode Tech Stack States
+  const [isVoiceFirstEnabled, setIsVoiceFirstEnabled] = useState(true);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+
   const [styles, setStyles] = useState<{ highlight: React.CSSProperties, popover: React.CSSProperties }>({
     highlight: { display: 'none' },
     popover: { display: 'none' },
@@ -35,6 +42,18 @@ export const TourGuide: React.FC<TourGuideProps> = ({
   
   const popoverRef = useRef<HTMLDivElement>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // State reference tracking to completely avoid stale closures in browser event listeners
+  const isOpenRef = useRef(isOpen);
+  const isVoiceFirstRef = useRef(isVoiceFirstEnabled);
+  const isSpeakingRef = useRef(isSpeaking);
+  const isMutedRef = useRef(isMuted);
+
+  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
+  useEffect(() => { isVoiceFirstRef.current = isVoiceFirstEnabled; }, [isVoiceFirstEnabled]);
+  useEffect(() => { isSpeakingRef.current = isSpeaking; }, [isSpeaking]);
+  useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
 
   // English Steps Definition
   const stepsEn: TourStep[] = [
@@ -251,12 +270,20 @@ export const TourGuide: React.FC<TourGuideProps> = ({
     utterance.onend = () => {
       setIsSpeaking(false);
       setIsPaused(false);
+      // Auto start listening in voice-first mode
+      setTimeout(() => {
+        startListeningIfEnabled();
+      }, 300);
     };
 
     utterance.onerror = (e) => {
       console.warn('Speech synthesis error:', e);
       setIsSpeaking(false);
       setIsPaused(false);
+      // Auto start listening in voice-first mode
+      setTimeout(() => {
+        startListeningIfEnabled();
+      }, 300);
     };
 
     window.speechSynthesis.speak(utterance);
@@ -446,20 +473,149 @@ export const TourGuide: React.FC<TourGuideProps> = ({
 
   if (!isOpen) return null;
 
-  const handleNext = () => {
+  function handleNext() {
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
       localStorage.setItem('user_journey_completed', 'true');
       onClose();
     }
-  };
+  }
 
-  const handlePrev = () => {
+  function handlePrev() {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
     }
-  };
+  }
+
+  function startListeningIfEnabled() {
+    if (!isOpenRef.current || !isVoiceFirstRef.current || isMutedRef.current) return;
+    
+    // Make sure SpeechSynthesis is not speaking
+    if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.speaking) {
+      return; 
+    }
+    
+    if (recognitionRef.current) {
+      recognitionRef.current.lang = language === 'ar' ? 'ar-SA' : 'en-US';
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        // Already running, catch and ignore
+      }
+    }
+  }
+
+  function handleVoiceCommand(text: string) {
+    const cleanText = text.trim().toLowerCase();
+    
+    const nextWordsEn = ['next', 'continue', 'yes', 'okay', 'ok', 'go', 'proceed', 'forward', 'step', 'acknowledge'];
+    const nextWordsAr = ['التالي', 'نعم', 'موافق', 'موافقة', 'استمر', 'متابعة', 'قدام', 'خطوة', 'صحيح', 'أوك', 'مستعد'];
+    
+    const backWordsEn = ['back', 'previous', 'return', 'reverse', 'past', 'go back'];
+    const backWordsAr = ['السابق', 'رجوع', 'خلف', 'ورا', 'سابق', 'للخلف'];
+    
+    const exitWordsEn = ['exit', 'close', 'stop', 'quit', 'end', 'cancel', 'terminate', 'finish'];
+    const exitWordsAr = ['خروج', 'إلغاء', 'إيقاف', 'وقف', 'إنهاء', 'اغلاق', 'إغلاق', 'خلص'];
+
+    const muteWordsEn = ['mute', 'silent', 'shutup', 'quiet'];
+    const muteWordsAr = ['صامت', 'كتم', 'اسكت', 'هدوء'];
+
+    // Check if matching any category
+    const isNext = nextWordsEn.some(w => cleanText.includes(w)) || (language === 'ar' && nextWordsAr.some(w => cleanText.includes(w)));
+    const isBack = backWordsEn.some(w => cleanText.includes(w)) || (language === 'ar' && backWordsAr.some(w => cleanText.includes(w)));
+    const isExit = exitWordsEn.some(w => cleanText.includes(w)) || (language === 'ar' && exitWordsAr.some(w => cleanText.includes(w)));
+    const isMute = muteWordsEn.some(w => cleanText.includes(w)) || (language === 'ar' && muteWordsAr.some(w => cleanText.includes(w)));
+
+    if (isNext) {
+      handleNext();
+    } else if (isBack) {
+      handlePrev();
+    } else if (isExit) {
+      onClose();
+    } else if (isMute) {
+      toggleMute();
+    }
+  }
+
+  // Set up standard Speech Recognition
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognitionClass) {
+      const rec = new SpeechRecognitionClass();
+      rec.continuous = false;
+      rec.interimResults = false;
+      
+      rec.onstart = () => {
+        setIsListening(true);
+        setVoiceError(null);
+      };
+      
+      rec.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setVoiceTranscript(transcript);
+        handleVoiceCommand(transcript);
+      };
+      
+      rec.onerror = (event: any) => {
+        const err = event.error;
+        if (err === 'not-allowed') {
+          setVoiceError(language === 'ar' ? 'مطلوب إذن الميكروفون' : 'Microphone permission required');
+        } else if (err !== 'no-speech') {
+          setVoiceError(err);
+        }
+        setIsListening(false);
+      };
+      
+      rec.onend = () => {
+        setIsListening(false);
+        // Auto-restart listening if voice-first is active and we are idle
+        setTimeout(() => {
+          if (isOpenRef.current && isVoiceFirstRef.current && !isSpeakingRef.current && !isMutedRef.current) {
+            startListeningIfEnabled();
+          }
+        }, 450);
+      };
+      
+      recognitionRef.current = rec;
+    } else {
+      setVoiceError(language === 'ar' ? 'التعرف على الصوت غير مدعوم' : 'Speech recognition not supported');
+    }
+    
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+      }
+    };
+  }, [language]);
+
+  // Audio-loop monitoring effect
+  useEffect(() => {
+    if (!isOpen || !isVoiceFirstEnabled) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+      return;
+    }
+
+    if (isSpeaking) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    } else {
+      const timer = setTimeout(() => {
+        startListeningIfEnabled();
+      }, 550);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isVoiceFirstEnabled, isSpeaking, currentStep, isMuted]);
 
   const isRTL = language === 'ar';
 
@@ -517,9 +673,87 @@ export const TourGuide: React.FC<TourGuideProps> = ({
           </h3>
 
           {/* Step Content */}
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4 min-h-[50px]">
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3 min-h-[45px]">
             {step.content}
           </p>
+
+          {/* Voice-First Console Panel */}
+          <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  {isVoiceFirstEnabled && isListening && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  )}
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isVoiceFirstEnabled ? (isListening ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-slate-300'}`}></span>
+                </span>
+                {language === 'ar' ? 'وضع التحكم الصوتي التفاعلي' : 'Interactive Voice Control'}
+              </span>
+              <button
+                onClick={() => {
+                  const nextState = !isVoiceFirstEnabled;
+                  setIsVoiceFirstEnabled(nextState);
+                  if (!nextState && recognitionRef.current) {
+                    try {
+                      recognitionRef.current.stop();
+                    } catch (e) {}
+                  }
+                }}
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${
+                  isVoiceFirstEnabled
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                }`}
+              >
+                {isVoiceFirstEnabled 
+                  ? (language === 'ar' ? 'نشط' : 'Enabled') 
+                  : (language === 'ar' ? 'متوقف' : 'Disabled')}
+              </button>
+            </div>
+
+            {isVoiceFirstEnabled && (
+              <div className="text-[11px] space-y-1.5 mt-0.5">
+                {/* Listening Status Indicators */}
+                {isSpeaking ? (
+                  <div className="text-slate-500 dark:text-slate-400 italic flex items-center gap-1">
+                    <span className="animate-pulse">●</span>
+                    {language === 'ar' ? 'انتظر انتهاء صوت المساعد السيبراني...' : 'Listening paused during narration...'}
+                  </div>
+                ) : isListening ? (
+                  <div className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 animate-bounce text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span>
+                      {language === 'ar' 
+                        ? "تحدث الآن (قل: 'التالي'، 'السابق'، 'خروج')" 
+                        : "Speak now (say: 'Next', 'Back', 'Exit')"}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-amber-500 dark:text-amber-400 flex items-center gap-1">
+                    <span>⚡</span>
+                    <span>{language === 'ar' ? 'مستعد للتشغيل...' : 'Initializing speech link...'}</span>
+                  </div>
+                )}
+
+                {/* Show Transcript Feedback */}
+                {voiceTranscript && (
+                  <div className="p-1.5 rounded bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80 font-mono text-[10px] text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
+                    <span className="font-bold">{language === 'ar' ? 'مسموع:' : 'Heard:'}</span>
+                    <span className="italic">"{voiceTranscript}"</span>
+                  </div>
+                )}
+
+                {/* Show Speech Recognition Error if any */}
+                {voiceError && (
+                  <div className="p-1.5 rounded bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-[10px] text-red-600 dark:text-red-400">
+                    ⚠️ {voiceError}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Action Controls Footer */}
