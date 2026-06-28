@@ -46,6 +46,56 @@
         border-color: rgba(255, 255, 255, 0.15);
       }
 
+      /* Water Gel Transparent Buttons */
+      .water-gel-btn {
+        background: rgba(13, 148, 136, 0.08); /* transparent teal */
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(13, 148, 136, 0.2);
+        color: #0f766e; /* teal-700 */
+        font-weight: 500;
+        border-radius: 10px;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 
+                    0 2px 4px rgba(0, 0, 0, 0.03);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        cursor: pointer;
+      }
+      html.dark .water-gel-btn {
+        background: rgba(45, 212, 191, 0.06); /* transparent teal-light */
+        border: 1px solid rgba(45, 212, 191, 0.15);
+        color: #2dd4bf; /* teal-400 */
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08),
+                    0 2px 4px rgba(0, 0, 0, 0.12);
+      }
+      .water-gel-btn:hover:not(:disabled) {
+        background: rgba(13, 148, 136, 0.16);
+        border-color: rgba(13, 148, 136, 0.35);
+        transform: translateY(-1px);
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4),
+                    0 6px 12px rgba(13, 148, 136, 0.12);
+      }
+      html.dark .water-gel-btn:hover:not(:disabled) {
+        background: rgba(45, 212, 191, 0.12);
+        border-color: rgba(45, 212, 191, 0.3);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15),
+                    0 6px 12px rgba(45, 212, 191, 0.12);
+      }
+      .water-gel-btn:active:not(:disabled) {
+        transform: translateY(1px);
+        box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.1);
+      }
+      .water-gel-btn:disabled {
+        background: rgba(156, 163, 175, 0.04);
+        border-color: rgba(156, 163, 175, 0.1);
+        color: rgba(156, 163, 175, 0.35);
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
       #loading-indicator {
         display: flex;
         flex-direction: column;

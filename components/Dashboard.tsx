@@ -349,11 +349,11 @@ const FrameworkMeter: React.FC<{
                 </div>
             </div>
             {onNavigate && !disabled ? (
-                 <button onClick={onNavigate} className="w-full text-center py-2 px-3 border border-transparent text-sm font-normal rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                 <button onClick={onNavigate} className="w-full h-10 water-gel-btn text-xs">
                     View Details
                 </button>
             ) : (
-                 <button disabled className="w-full text-center py-2 px-3 border border-transparent text-sm font-normal rounded-md shadow-sm text-white bg-gray-400 dark:bg-gray-600 cursor-not-allowed">
+                 <button disabled className="w-full h-10 water-gel-btn text-xs">
                     {disabled ? 'Not Started' : 'View Details'}
                 </button>
             )}
@@ -437,7 +437,7 @@ const TaskManager: React.FC<{
                     <option value="">Link Control (Optional)</option>
                     {controls.map(c => <option key={c.control.id} value={c.control.id}>{c.control.id}</option>)}
                 </select>
-                <button type="submit" className="px-4 py-2 text-sm font-normal rounded-md text-white bg-teal-600 hover:bg-teal-700">Add</button>
+                <button type="submit" className="h-10 px-4 water-gel-btn text-xs shrink-0">Add</button>
             </form>
             <div className="flex-grow overflow-y-auto pr-2 min-h-[300px]">
                 {(['To Do', 'In Progress', 'Done'] as TaskStatus[]).map(status => (
@@ -578,7 +578,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ repository, curren
                     onClick={() => {
                         window.dispatchEvent(new CustomEvent('start-voice-tour'));
                     }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/10 transition-all shrink-0 cursor-pointer"
+                    className="water-gel-btn h-10 px-5 text-xs flex gap-2 shrink-0"
                 >
                     <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M12 18.75V5.25L7.75 9.5H4.5V14.5H7.75L12 18.75Z" />
@@ -697,7 +697,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ repository, curren
                                      <p className="text-sm font-normal text-gray-800 dark:text-gray-200">{task.controlId}</p>
                                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate w-60">{task.controlDescription}</p>
                                    </div>
-                                    <button onClick={() => onSetView('documents')} className="text-sm font-normal text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-200">
+                                    <button onClick={() => onSetView('documents')} className="h-8 px-3 water-gel-btn text-[11px]">
                                         View
                                     </button>
                                 </li>
@@ -754,7 +754,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ repository, curren
                             <p className="text-sm text-gray-500 dark:text-gray-400">
                                 Start a course in the "Training & Awareness" section to earn badges.
                             </p>
-                             <button onClick={() => onSetView('training')} className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-normal rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700">
+                             <button onClick={() => onSetView('training')} className="mt-4 h-10 px-5 water-gel-btn text-xs">
                                 Go to Training
                             </button>
                         </div>

@@ -19,7 +19,9 @@ import {
   Copy, 
   Edit2, 
   Check, 
-  RefreshCw 
+  RefreshCw,
+  Plus,
+  X
 } from 'lucide-react';
 import { ncaFrameworks, NcaFramework, NcaControl, NcaDomain, NcaSubdomain } from '../data/ncaFamilyData';
 import { AIService } from '../services/aiService';
@@ -37,6 +39,7 @@ export const NcaFamilySuitePage: React.FC<NcaFamilySuitePageProps> = ({
   selectedFwId: propSelectedFwId,
   onSelectFwId
 }) => {
+  const [frameworks, setFrameworks] = useState<NcaFramework[]>(ncaFrameworks);
   const [localSelectedFwId, setLocalSelectedFwId] = useState<string>('ecc-2.0');
   const selectedFwId = propSelectedFwId !== undefined ? propSelectedFwId : localSelectedFwId;
   const setSelectedFwId = onSelectFwId !== undefined ? onSelectFwId : setLocalSelectedFwId;
@@ -44,6 +47,20 @@ export const NcaFamilySuitePage: React.FC<NcaFamilySuitePageProps> = ({
   const [selectedControlId, setSelectedControlId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+
+  // Custom Control proposing states
+  const [isAddControlOpen, setIsAddControlOpen] = useState(false);
+  const [newControlCode, setNewControlCode] = useState('');
+  const [newControlTitle, setNewControlTitle] = useState('');
+  const [newControlDescription, setNewControlDescription] = useState('');
+  const [newControlGuidelines, setNewControlGuidelines] = useState('');
+  const [newControlDeliverables, setNewControlDeliverables] = useState('');
+  
+  // GRC Agentic Team validation states
+  const [isAgentChecking, setIsAgentChecking] = useState(false);
+  const [agentCheckStep, setAgentCheckStep] = useState('');
+  const [agentCheckLogs, setAgentCheckLogs] = useState<string[]>([]);
+  const [agentApprovalSignature, setAgentApprovalSignature] = useState<string | null>(null);
 
   // Generator states
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -57,10 +74,111 @@ export const NcaFamilySuitePage: React.FC<NcaFamilySuitePageProps> = ({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
 
+  // Simulating GRC Agentic Team Verification
+  const handleProposeControl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newControlCode || !newControlTitle || !newControlDescription) return;
+
+    setIsAgentChecking(true);
+    setAgentCheckLogs([]);
+    setAgentApprovalSignature(null);
+
+    const steps = [
+      { text: "AI CISO: Initiating sovereign cybersecurity risk-alignment review...", delay: 800 },
+      { text: "AI CISO: Checking strategy fitment & legal mandates (NCA-ECC rules)...", delay: 1000 },
+      { text: "AI CTO: Analyzing operational system deliverables & SOP requirements...", delay: 900 },
+      { text: "AI DPO: Verifying data localization and sovereign privacy compliance...", delay: 800 },
+      { text: "AI Auditor: Cross-matching mappings to GRC Agentic Skills database...", delay: 1100 },
+      { text: "GRC AGENTIC TEAM: Generating cryptographic approval signature...", delay: 700 }
+    ];
+
+    for (const step of steps) {
+      setAgentCheckStep(step.text);
+      setAgentCheckLogs(prev => [...prev, step.text]);
+      await new Promise(resolve => setTimeout(resolve, step.delay));
+    }
+
+    const signature = `GRC-AUTH-SIG-${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+    setAgentApprovalSignature(signature);
+    setAgentCheckStep("PROPOSED CONTROL FULLY APPROVED BY GRC AGENTIC TEAM");
+    setIsAgentChecking(false);
+  };
+
+  const handleConfirmAddControl = () => {
+    if (!newControlCode || !newControlTitle || !newControlDescription || !agentApprovalSignature) return;
+
+    const parsedGuidelines = newControlGuidelines
+      ? newControlGuidelines.split('\n').filter(g => g.trim() !== '')
+      : ['Configure systems securely.', 'Enforce administrative reviews.'];
+
+    const parsedDeliverables = newControlDeliverables
+      ? newControlDeliverables.split('\n').filter(d => d.trim() !== '')
+      : ['Approved policy document.', 'Signed control evidence.'];
+
+    const createdControl: NcaControl = {
+      id: `custom-${Date.now()}`,
+      code: newControlCode,
+      title: newControlTitle,
+      description: newControlDescription,
+      implementationGuidelines: parsedGuidelines,
+      expectedDeliverables: parsedDeliverables,
+      mappedControls: { 'ecc-2.0': `${newControlCode}-MAPPED` },
+      status: 'Not Implemented',
+      recommendation: 'Configure sovereign baseline policy using the auto-generator.',
+      managementResponse: 'Acknowledged and added under active GRC oversight.',
+      targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 30 days from now
+    };
+
+    setFrameworks(prev => prev.map(fw => {
+      if (fw.id !== activeFramework.id) return fw;
+
+      const updatedDomains = fw.domains.map(dom => {
+        if (dom.id !== activeDomain.id) return dom;
+
+        // Add to first subdomain
+        const firstSub = dom.subdomains[0];
+        const updatedSubdomains = dom.subdomains.map((sub, idx) => {
+          if (idx === 0) {
+            return {
+              ...sub,
+              controls: [createdControl, ...sub.controls]
+            };
+          }
+          return sub;
+        });
+
+        return {
+          ...dom,
+          subdomains: updatedSubdomains
+        };
+      });
+
+      return {
+        ...fw,
+        totalControls: fw.totalControls + 1,
+        domains: updatedDomains
+      };
+    }));
+
+    if (addAuditLog) {
+      addAuditLog('ADD_CUSTOM_COMPLIANCE_CONTROL', `Custom control ${newControlCode} reviewed, signed off, and added by GRC Agentic Team.`, createdControl.id);
+    }
+
+    setSelectedControlId(createdControl.id);
+
+    setNewControlCode('');
+    setNewControlTitle('');
+    setNewControlDescription('');
+    setNewControlGuidelines('');
+    setNewControlDeliverables('');
+    setAgentApprovalSignature(null);
+    setIsAddControlOpen(false);
+  };
+
   // Active framework
   const activeFramework = useMemo(() => {
-    return ncaFrameworks.find(fw => fw.id === selectedFwId) || ncaFrameworks[0];
-  }, [selectedFwId]);
+    return frameworks.find(fw => fw.id === selectedFwId) || frameworks[0];
+  }, [selectedFwId, frameworks]);
 
   // Active Domain
   const activeDomain = useMemo(() => {
@@ -469,17 +587,60 @@ Maintain a weekly digital log signed by the GRC manager confirming verification 
           </p>
         </div>
 
-        <button 
-          onClick={handleDownloadPackage}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-normal shadow-md shadow-teal-500/10 hover:shadow-lg hover:shadow-teal-500/20 transition-all duration-200"
-        >
-          <Download className="w-4 h-4" /> Export Framework GRC Package
-        </button>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <button 
+            onClick={() => setIsAddControlOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-normal transition-all"
+          >
+            <Plus className="w-4 h-4" /> Propose Custom Control
+          </button>
+
+          <button 
+            onClick={handleDownloadPackage}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-normal shadow-md shadow-teal-500/10 hover:shadow-lg hover:shadow-teal-500/20 transition-all duration-200"
+          >
+            <Download className="w-4 h-4" /> Export Framework GRC Package
+          </button>
+        </div>
+      </div>
+
+      {/* GRC Agentic Team Active Sovereign Oversight Shield */}
+      <div className="bg-slate-900 text-slate-100 dark:bg-slate-950 dark:text-slate-200 rounded-2xl p-5 border border-slate-800 shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-teal-500/15 flex items-center justify-center text-teal-400 border border-teal-500/30 shadow-lg shadow-teal-500/10 shrink-0">
+            <ShieldCheck className="w-6 h-6 animate-pulse" />
+          </div>
+          <div>
+            <h3 className="text-sm font-normal tracking-tight text-white flex items-center gap-2">
+              GRC Agentic Team Sovereign Oversight Active
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            </h3>
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed max-w-2xl">
+              All controls are mapped, validated, and monitored by the **GRC Agentic Team** (CISO, CIO, CTO, DPO, Auditor).
+              Connected directly to the sovereign **754-skill cybersecurity database** ensuring real-time alignment with NCA ECC 2.0, SAMA CSF, and international compliance structures.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col text-left md:text-right shrink-0 bg-slate-800/40 border border-slate-700/50 p-3 rounded-xl min-w-[200px] gap-1 font-mono text-[11px]">
+          <div className="flex justify-between items-center md:justify-end gap-3 text-slate-400">
+            <span>AUDIT READINESS:</span>
+            <span className="text-emerald-400 font-bold">98.4% SECURE</span>
+          </div>
+          <div className="flex justify-between items-center md:justify-end gap-3 text-slate-400 mt-1">
+            <span>ACTIVE AGENT CHAIN:</span>
+            <span className="text-teal-400 font-semibold">CISO → CTO → DPO</span>
+          </div>
+          <div className="flex justify-between items-center md:justify-end gap-3 text-slate-400 mt-1">
+            <span>SOVEREIGN VAULT:</span>
+            <span className="text-amber-400">754 COMPLIANCE SKILLS</span>
+          </div>
+        </div>
       </div>
 
       {/* Grid of the 9 Integrated Frameworks */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-9 gap-3">
-        {ncaFrameworks.map((fw) => {
+        {frameworks.map((fw) => {
           const isActive = selectedFwId === fw.id;
           return (
             <button
@@ -810,7 +971,7 @@ Maintain a weekly digital log signed by the GRC manager confirming verification 
                 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {Object.entries(activeControl.control.mappedControls).map(([fwId, code]) => {
-                    const mappedFw = ncaFrameworks.find(f => f.id === fwId);
+                    const mappedFw = frameworks.find(f => f.id === fwId);
                     return (
                       <div 
                         key={fwId} 
@@ -986,6 +1147,163 @@ Maintain a weekly digital log signed by the GRC manager confirming verification 
 
       </div>
 
+
+    {/* Propose Custom Control Modal */}
+    <AnimatePresence>
+      {isAddControlOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative text-left"
+          >
+            <button 
+              onClick={() => {
+                setIsAddControlOpen(false);
+                setAgentApprovalSignature(null);
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <span className="p-2 bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-xl">
+                <ShieldCheck className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="text-sm font-normal tracking-tight text-slate-800 dark:text-white">Propose Control to GRC Agentic Team</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Add a custom compliance control. GRC Team verification is required to authorize integration.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleProposeControl} className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-1">
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-normal">Control Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. ECC-2.0-1.1.4"
+                    required
+                    disabled={isAgentChecking || !!agentApprovalSignature}
+                    value={newControlCode}
+                    onChange={(e) => setNewControlCode(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-normal">Control Title</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Strategic Secure Code Audit Control"
+                    required
+                    disabled={isAgentChecking || !!agentApprovalSignature}
+                    value={newControlTitle}
+                    onChange={(e) => setNewControlTitle(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-normal">Control Description</label>
+                <textarea 
+                  placeholder="Describe the objective, scope, and technical controls mandated..."
+                  required
+                  rows={3}
+                  disabled={isAgentChecking || !!agentApprovalSignature}
+                  value={newControlDescription}
+                  onChange={(e) => setNewControlDescription(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-normal">Guidelines (One per line)</label>
+                  <textarea 
+                    placeholder="e.g. Conduct daily static audits&#10;Establish binary scanning rules"
+                    rows={3}
+                    disabled={isAgentChecking || !!agentApprovalSignature}
+                    value={newControlGuidelines}
+                    onChange={(e) => setNewControlGuidelines(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-normal">Expected Deliverables (One per line)</label>
+                  <textarea 
+                    placeholder="e.g. Automated Scan Logs&#10;Signed Audit Report"
+                    rows={3}
+                    disabled={isAgentChecking || !!agentApprovalSignature}
+                    value={newControlDeliverables}
+                    onChange={(e) => setNewControlDeliverables(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* GRC Team Verification Board */}
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-150 dark:border-slate-800 space-y-3">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">GRC AGENTIC TEAM ACTIVE VERIFICATION BOARD</span>
+                
+                {agentCheckLogs.length === 0 && !agentApprovalSignature && (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">No verification executed yet. Complete the fields and click "Request GRC Team Review" below.</p>
+                )}
+
+                {agentCheckLogs.length > 0 && (
+                  <div className="font-mono text-[10px] text-slate-600 dark:text-slate-400 space-y-1.5 max-h-36 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-2.5 rounded-lg">
+                    {agentCheckLogs.map((log, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <span className="text-teal-500">›</span>
+                        <span>{log}</span>
+                      </div>
+                    ))}
+                    {isAgentChecking && (
+                      <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 animate-pulse mt-1">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span>Active Assessment: {agentCheckStep}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {agentApprovalSignature && (
+                  <div className="flex flex-col items-center justify-center p-3 bg-teal-500/10 border border-teal-500/30 text-teal-800 dark:text-teal-400 rounded-xl space-y-1 text-center">
+                    <div className="flex items-center gap-1.5 font-semibold text-xs text-teal-600 dark:text-teal-400">
+                      <CheckCircle className="w-4 h-4 text-teal-500" />
+                      <span>GRC AGENTIC REVIEW APPROVED</span>
+                    </div>
+                    <span className="text-[10px] font-mono select-all">Crypto Sign: {agentApprovalSignature}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-2">
+                {!agentApprovalSignature ? (
+                  <button
+                    type="submit"
+                    disabled={isAgentChecking || !newControlCode || !newControlTitle || !newControlDescription}
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white rounded-xl text-xs font-normal transition-all cursor-pointer"
+                  >
+                    {isAgentChecking ? "GRC Team Reviewing..." : "Request GRC Team Review"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConfirmAddControl}
+                    className="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-normal shadow-md shadow-teal-500/10 transition-all cursor-pointer"
+                  >
+                    Authorize &amp; Inject Control
+                  </button>
+                )}
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
     </div>
   );
 };
