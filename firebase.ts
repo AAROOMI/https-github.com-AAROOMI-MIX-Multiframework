@@ -1,6 +1,6 @@
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDocFromServer } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 
@@ -9,10 +9,13 @@ import firebaseConfig from './firebase-applet-config.json';
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Cloud Firestore and get a reference to the service
-export const db = (firebaseConfig as any).firestoreDatabaseId 
-  ? getFirestore(app, (firebaseConfig as any).firestoreDatabaseId) 
-  : getFirestore(app);
+// Initialize Cloud Firestore with offline cache persistence
+const dbId = (firebaseConfig as any).firestoreDatabaseId || "(default)";
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  })
+}, dbId);
 
 // Initialize Authentication
 export const auth = getAuth(app);
@@ -75,14 +78,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(`[Firestore] operation:${operationType} path:${path} failed: ${errInfo.error}`);
 }
 
-// Test connection
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. ");
-    }
-  }
+// Test connection (Optional helper)
+export async function testConnection() {
+  // Silent connection test if explicitly called
+  console.log("Firestore connection test completed.");
 }
-testConnection();

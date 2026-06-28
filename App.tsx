@@ -15,6 +15,7 @@ import { PDPLAssessmentPage } from './components/PDPLAssessmentPage';
 import { SamaCsfAssessmentPage } from './components/SamaCsfAssessmentPage';
 import { CMAAssessmentPage } from './components/CMAAssessmentPage';
 import { NcaFamilySuitePage } from './components/NcaFamilySuitePage';
+import { SamaFamilySuitePage } from './components/SamaFamilySuitePage';
 import { UserProfilePage } from './components/UserProfilePage';
 import { HelpSupportPage } from './components/HelpSupportPage';
 import { TrainingPage } from './components/TrainingPage';
@@ -83,6 +84,7 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState<View>('creatorMarketplace');
   const [selectedNcaFrameworkId, setSelectedNcaFrameworkId] = useState<string>('ecc-2.0');
+  const [selectedSamaFrameworkId, setSelectedSamaFrameworkId] = useState<string>('sama-csf-249');
   const [isLoading, setIsLoading] = useState(true);
   
   const [isOnline, setIsOnline] = useState(window.navigator.onLine);
@@ -849,6 +851,8 @@ export default function App() {
         language={language}
         selectedNcaFrameworkId={selectedNcaFrameworkId}
         onSelectNcaFrameworkId={setSelectedNcaFrameworkId}
+        selectedSamaFrameworkId={selectedSamaFrameworkId}
+        onSelectSamaFrameworkId={setSelectedSamaFrameworkId}
       />
       
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
@@ -1173,6 +1177,14 @@ export default function App() {
                     addAuditLog={handleAddAuditLog}
                     selectedFwId={selectedNcaFrameworkId}
                     onSelectFwId={setSelectedNcaFrameworkId}
+                />
+            )}
+            {currentView === 'samaFamilySuite' && (
+                <SamaFamilySuitePage 
+                    language={language}
+                    addAuditLog={handleAddAuditLog}
+                    selectedFwId={selectedSamaFrameworkId}
+                    onSelectFwId={setSelectedSamaFrameworkId}
                 />
             )}
             {currentView === 'userProfile' && (

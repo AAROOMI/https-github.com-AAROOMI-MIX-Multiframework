@@ -22,6 +22,8 @@ interface SidebarProps {
   onCloseMobile?: () => void;
   selectedNcaFrameworkId?: string;
   onSelectNcaFrameworkId?: (fwId: string) => void;
+  selectedSamaFrameworkId?: string;
+  onSelectSamaFrameworkId?: (fwId: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -36,7 +38,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen = false,
   onCloseMobile,
   selectedNcaFrameworkId,
-  onSelectNcaFrameworkId
+  onSelectNcaFrameworkId,
+  selectedSamaFrameworkId,
+  onSelectSamaFrameworkId
 }) => {
   const t = translations[language];
   const { isMenuEnabled } = useFeatureToggles();
@@ -562,6 +566,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             onSelectNcaFrameworkId(item.id);
                           }
                           onSetView('ncaFamilySuite');
+                        }}
+                        className={`w-full text-left py-2 px-3 rounded-lg text-[11px] transition-all duration-200 flex items-center relative overflow-hidden font-normal ${
+                          isItemActive ? 'water-gel-nav-btn-active' : 'water-gel-nav-btn'
+                        }`}
+                      >
+                        {/* 3D Specular Highlights */}
+                        <div className="absolute top-0 left-0 right-0 h-[45%] bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+                        <div className="absolute top-[0.5px] left-1 right-1 h-[1px] rounded-full bg-white/20 pointer-events-none blur-[0.1px]" />
+
+                        <span className="truncate relative z-10">{language === 'ar' ? item.nameAr : item.name}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+        </li>
+      )}
+
+      {permissions.has('assessment:read') && (
+        <li className="mt-1" id="sidebar-samaFamilySuite">
+          <button
+              onClick={() => handleNavClick('samaFamilySuite')}
+              className={`w-full text-left p-3 rounded-xl text-[13px] transition-all duration-300 flex items-center group relative overflow-hidden ${
+                currentView === 'samaFamilySuite' ? 'water-gel-nav-btn-active' : 'water-gel-nav-btn'
+              }`}
+            >
+              {/* 3D Specular Highlights */}
+              <div className="absolute top-0 left-0 right-0 h-[45%] bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+              <div className="absolute top-[0.5px] left-1.5 right-1.5 h-[1.5px] rounded-full bg-white/30 pointer-events-none blur-[0.1px]" />
+              <div className="absolute bottom-[0.5px] left-2 right-2 h-[1px] rounded-full bg-gradient-to-t from-white/10 to-transparent pointer-events-none" />
+
+              <LandmarkIcon className={`w-5 h-5 mr-3 transition-colors relative z-10 ${currentView === 'samaFamilySuite' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-blue-600'}`} />
+              <span className="font-normal relative z-10 text-blue-700 dark:text-blue-300">{language === 'ar' ? 'إطارات مؤسسة النقد SAMA' : 'SAMA Framework Family'}</span>
+            </button>
+
+            {currentView === 'samaFamilySuite' && (
+              <ul className="mt-2 ml-4 pl-3 border-l border-blue-500/30 space-y-1.5">
+                {[
+                  { id: 'sama-csf-249', name: 'SAMA CSF (249 Controls)', nameAr: 'إطار الأمن السيبراني (249 ضابط)' },
+                  { id: 'sama-bcm-76', name: 'SAMA BCM (76 Controls)', nameAr: 'استمرارية الأعمال (76 ضابط)' },
+                  { id: 'sama-itg-568', name: 'SAMA IT Governance (568 Controls)', nameAr: 'حوكمة تقنية المعلومات (568 ضابط)' },
+                  { id: 'sama-cti-69', name: 'SAMA CTI (69 Controls)', nameAr: 'استخبارات التهديدات (69 ضابط)' },
+                  { id: 'sama-fraud-707', name: 'SAMA Fraud Controls (707 Controls)', nameAr: 'ضوابط الاحتيال (707 ضابط)' },
+                  { id: 'sama-mvc-32', name: 'SAMA MVC (32 Controls)', nameAr: 'التحقق من النماذج (32 ضابط)' },
+                  { id: 'sama-crfr-23', name: 'SAMA CRFR (23 Controls)', nameAr: 'مرونة المخاطر (23 ضابط)' },
+                ].map((item) => {
+                  const isItemActive = selectedSamaFrameworkId === item.id;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => {
+                          if (onSelectSamaFrameworkId) {
+                            onSelectSamaFrameworkId(item.id);
+                          }
+                          onSetView('samaFamilySuite');
                         }}
                         className={`w-full text-left py-2 px-3 rounded-lg text-[11px] transition-all duration-200 flex items-center relative overflow-hidden font-normal ${
                           isItemActive ? 'water-gel-nav-btn-active' : 'water-gel-nav-btn'

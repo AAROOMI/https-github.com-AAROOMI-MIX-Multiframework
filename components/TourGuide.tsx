@@ -40,50 +40,71 @@ export const TourGuide: React.FC<TourGuideProps> = ({
   const stepsEn: TourStep[] = [
     {
       target: 'body',
-      title: 'Welcome to GRC Cybersecurity Navigator',
-      content: 'Welcome, Officer! This interactive voice guide will walk you through your high-security GRC compliance system. Let us guide you through our main modules.',
+      title: 'Welcome to your GRC Cybersecurity Command',
+      content: 'Welcome, Officer! This interactive voice-guided journey will walk you through the entire application step-by-step. We will explain how to use every single function across our sovereign compliance ecosystem so you can easily navigate and master your security controls.',
       position: 'center',
       view: 'dashboard'
     },
     {
       target: '#sidebar-dashboard',
-      title: 'Dynamic Compliance Dashboard',
-      content: 'This is your centralized command center. It aggregates compliance scores across Saudi NCA ECC, PDPL, SAMA, and CMA controls, visualizing risk levels and track items in real-time.',
+      title: 'Compliance Command Dashboard',
+      content: 'How to use: Use this dashboard to get an immediate high-level standing of your organizational alignment. You can track dynamic gauges and risk alerts. Scroll to the bottom to view the blockchain-inspired audit log. Here, every control modification, AI document generation, or digital sign-off is logged in an immutable ledger with full cryptographic signatures.',
       position: 'right',
       view: 'dashboard'
     },
     {
       target: '#sidebar-assessment',
-      title: 'NCA ECC Compliance Portal',
-      content: 'Browse, manage, and audit Essential Cybersecurity Controls (ECC) here. You can run gap analyses, assign subdomains, and upload evidence directly to the immutable audit ledger.',
+      title: 'Saudi NCA ECC Compliance Portal',
+      content: 'How to use: Click here to manage your alignment with Saudi National Cybersecurity Authority Essential Controls. In this portal, navigate the 5 main security domains on the left. Click any domain to drill down into controls. For each control, you can review details, toggle implementation status, assign control owners, and upload verification files to your secure evidence vault.',
       position: 'right',
       view: 'assessment'
     },
     {
+      target: '#sidebar-samaFamilySuite',
+      title: 'SAMA Banking Framework Suite',
+      content: 'How to use: This is a highly specialized environment representing the Saudi Central Bank regulations. Toggle between 7 distinct financial frameworks, such as Cyber Security Framework, Business Continuity, and Fraud. This lets you align core banking services with regulatory directives in one consolidated workstation.',
+      position: 'right',
+      view: 'samaFamilySuite'
+    },
+    {
+      target: '#sama-propose-btn',
+      title: 'Proposing Custom SAMA Controls',
+      content: 'How to use: If your bank requires custom controls, click the "Propose Custom SAMA Control" button at the bottom. Fill in the title and code. When submitted, our Virtual CISO AI agent automatically audits the proposal, runs an alignment check, and applies a secure, encrypted digital stamp of approval directly into the system logs.',
+      position: 'top',
+      view: 'samaFamilySuite'
+    },
+    {
+      target: '#sama-generate-policy-btn',
+      title: 'Automated GRC Policy & SOP Generation',
+      content: 'How to use: Under SAMA controls, select any control and click "Auto-Generate GRC Suite". The system drafts a full suite of board-ready compliance documents: security policies, step-by-step procedures, implementation guidelines, and standard operating matrices. You can edit and export these templates instantly.',
+      position: 'top',
+      view: 'samaFamilySuite'
+    },
+    {
       target: '#sidebar-virtualDepartment',
       title: 'Virtual Cybersecurity Boardroom',
-      content: 'Meet your virtual, autonomous department of AI agents! Each agent (CISO, CTO, DPO, CIO) has a custom professional profile and works on GRC policies, giving approvals with deep logic.',
+      content: 'How to use: Meet your virtual, autonomous department of GRC experts comprising CISO, CTO, DPO, and CIO. You can delegate custom compliance tasks to them, read their automated discussions as they debate security policy proposals, and view their cryptographic approval status for key tasks.',
       position: 'right',
       view: 'virtualDepartment'
     },
     {
       target: '#sidebar-riskAssessment',
-      title: 'ISO 31000 Risk Register',
-      content: 'This is the enterprise risk ledger aligned with ISO 31000 standards. Categorize vulnerabilities, calculate impact/likelihood matrices, and lock down secure mitigation measures.',
+      title: 'ISO 31000 Sovereign Risk Register',
+      content: 'How to use: To identify and mitigate enterprise threats, click "Identify New Risk". Enter the title, select threat category, and assign likelihood and impact values from 1 to 5. The matrix dynamically computes the Risk Score and highlights priority levels. You can then map mitigating controls to reduce vulnerabilities.',
       position: 'right',
       view: 'riskAssessment'
     },
     {
       target: '#header-airgap-toggle',
-      title: 'Government Air-Gap Redundancy Link',
-      content: 'For supreme sovereignty on secure government networks, toggle this switch. It redirects all GRC intelligence to your fully-embedded, offline Google Gemma 4 model with 100% data confinement.',
+      title: 'Air-Gap Sovereign Isolation',
+      content: 'How to use: Click the Neural Link button in the top header. In this mode, public external APIs are completely blocked, and all GRC intelligence, policy drafts, and virtual boardroom discussions are handled locally inside your secure environment using the embedded offline Gemma model.',
       position: 'bottom',
       view: 'dashboard'
     },
     {
       target: '#sidebar-liveVoiceDemo',
-      title: 'Sovereign Voice AI Sandbox',
-      content: 'Step into the Voice AI sandbox to test voice command navigation and interact with our Virtual GRC agents using secure local speech recognition.',
+      title: 'Sovereign Voice Assistant & Mic Navigation',
+      content: 'How to use: Click the microphone in the sidebar, or speak directly to our assistant. Try speaking navigation commands such as "Show Dashboard", "Open SAMA Suite", or "Open Risk Register" to run your compliance workstation completely hands-free using local secure voice recognition.',
       position: 'right',
       view: 'liveVoiceDemo'
     }
@@ -93,50 +114,71 @@ export const TourGuide: React.FC<TourGuideProps> = ({
   const stepsAr: TourStep[] = [
     {
       target: 'body',
-      title: 'مرحباً بك في منصة الحوكمة والالتزام',
-      content: 'أهلاً بك يا سيادة مسؤول الأمن السيبراني! سيقوم هذا الدليل الصوتي التفاعلي بمرافقتك في جولة سريعة داخل لوحة تحكم الحوكمة وإدارة المخاطر. استمع إلينا لنرشدك خطوة بخطوة.',
+      title: 'مرحباً بك في منصة الالتزام والسيادة السيبرانية',
+      content: 'أهلاً بك يا سيادة مسؤول الأمن السيبراني! سيرافقك هذا المساعد الصوتي التفاعلي خطوة بخطوة لشرح كل وظيفة من وظائف النظام المتكامل، لنوضح لك بالتفصيل كيفية تشغيل وإدارة متطلبات الالتزام عبر منشأتك بكل يسر.',
       position: 'center',
       view: 'dashboard'
     },
     {
       target: '#sidebar-dashboard',
-      title: 'لوحة التحكم والمؤشرات التفاعلية',
-      content: 'هنا تجد مركز القيادة والتحكم الخاص بك. تجمع لوحة التحكم هذه مؤشرات الأداء الحية لضوابط الهيئة الوطنية للأمن السيبراني ECC، والبنك المركزي السعودي SAMA، وهيئة السوق المالية CMA، ونظام PDPL في الوقت الفعلي.',
+      title: 'لوحة التحكم الموحدة لمؤشرات الأداء',
+      content: 'كيفية الاستخدام: تابع نسب الالتزام الموحدة لضوابط الهيئة الوطنية، والبنك المركزي، وهيئة السوق المالية، ونظام حماية البيانات الشخصية. كما يمكنك متابعة سجل التدقيق الحي في الأسفل لتتبع كل تغيير رقمياً وبشكل موثق وغير قابل للتعديل.',
       position: 'left',
       view: 'dashboard'
     },
     {
       target: '#sidebar-assessment',
-      title: 'بوابة التزام ضوابط الهيئة الوطنية ECC',
-      content: 'تتيح لك هذه البوابة مراجعة وتدقيق التزام منشأتك بضوابط الأمن السيبراني الأساسية الصادرة عن الهيئة الوطنية للأمن السيبراني، وإجراء تحليلات فجوات الالتزام ورفع أدلة الإثبات.',
+      title: 'بوابة ضوابط الهيئة الوطنية للأمن السيبراني ECC',
+      content: 'كيفية الاستخدام: تصفح المجالات الخمسة الرئيسية للضوابط، قم بالدخول في الضوابط الفرعية، وحدد حالة الالتزام لكل ضابط، وارفع مستندات الإثبات، وقم بتعيين المسؤولين عن التنفيذ لضمان تلبية المعايير الحكومية.',
       position: 'left',
       view: 'assessment'
     },
     {
+      target: '#sidebar-samaFamilySuite',
+      title: 'إطارات البنك المركزي السعودي SAMA',
+      content: 'كيفية الاستخدام: يمكنك التنقل بين سبعة إطارات مالية وتنظيمية مختلفة تشمل إطار الأمن السيبراني، واستمرارية الأعمال، وحوكمة تقنية المعلومات، ومكافحة الاحتيال، من شاشة موحدة تضمن تلبية متطلبات ساما للخدمات المصرفية.',
+      position: 'left',
+      view: 'samaFamilySuite'
+    },
+    {
+      target: '#sama-propose-btn',
+      title: 'اقتراح الضوابط المخصصة وإقرارها',
+      content: 'كيفية الاستخدام: تحت أي إطار من إطارات مؤسسة النقد، اضغط على زر "اقتراح ضابط مخصص" في أسفل القائمة لإضافة متطلبات خاصة بجهتك. سيقوم وكيل رئيس مكتب أمن المعلومات الافتراضي بالتدقيق في الضابط وتطبيق الختم الرقمي المشفر فور اعتماده.',
+      position: 'top',
+      view: 'samaFamilySuite'
+    },
+    {
+      target: '#sama-generate-policy-btn',
+      title: 'الصياغة الآلية لسياسات وإجراءات الحوكمة GRC',
+      content: 'كيفية الاستخدام: اختر أي ضابط من ضوابط إطارات ساما، واضغط على زر "صياغة مستندات الحوكمة". سيقوم محرك الذكاء الاصطناعي السيادي فوراً بصياغة حزمة متكاملة تشمل وثيقة السياسة، وإجراءات التشغيل القياسية SOP، والمصفوفات الوظيفية، والأدلة الرقابية الجاهزة للتصدير والتحرير.',
+      position: 'top',
+      view: 'samaFamilySuite'
+    },
+    {
       target: '#sidebar-virtualDepartment',
-      title: 'غرفة الاجتماعات الافتراضية للحوكمة',
-      content: 'تعرف على مجلس الإدارة الافتراضي المكون من خبراء الذكاء الاصطناعي! يمتلك كل وكيل (CISO, CTO, DPO, CIO) هوية وصوتاً مهنياً مخصصاً لمناقشة السياسات، والتصويت على القرارات، وتوزيع مهام مصفوفة راسي.',
+      title: 'مجلس الحوكمة وإدارة المهام الافتراضي',
+      content: 'كيفية الاستخدام: راقب نقاشات فريق وكلاء الذكاء الاصطناعي (رئيس أمن المعلومات، رئيس التقنية، مسؤول حماية البيانات، ورئيس المعلومات). يمكنك إسناد مهام الالتزام إليهم وتتبع موافقاتهم وتوقيعاتهم الرقمية المشفرة.',
       position: 'left',
       view: 'virtualDepartment'
     },
     {
       target: '#sidebar-riskAssessment',
-      title: 'سجل المخاطر وتصنيفها (ISO 31000)',
-      content: 'يتيح لك هذا السجل حصر وتصنيف ومعالجة المخاطر التقنية والتشغيلية وفق المعيار العالمي أيزو 31000، ومتابعة تنفيذ الضوابط الوقائية والمعالجات لتقليل مستويات التهديد.',
+      title: 'سجل وإدارة المخاطر التقنية ISO 31000',
+      content: 'كيفية الاستخدام: اضغط على زر "إضافة خطر جديد"، حدد وصف التهديد وفئته، ثم اختر درجة الاحتمالية والأثر من واحد إلى خمسة. سيقوم النظام بحساب درجة الخطر الكلية تلقائياً لتتمكن من وضع خطط المعالجة والضوابط الوقائية.',
       position: 'left',
       view: 'riskAssessment'
     },
     {
       target: '#header-airgap-toggle',
-      title: 'الربط المحلي الآمن للشبكات المعزولة',
-      content: 'لتحقيق السيادة المطلقة للبيانات في الشبكات المعزولة التابعة للجهات الحكومية، قم بتفعيل زر الربط المحلي. سيتحول النظام كلياً ليعتمد على نموذج غوغل غيما 4 المحلي بنسبة عزل كاملة عن الإنترنت.',
+      title: 'العزل السيادي التام للبيانات',
+      content: 'كيفية الاستخدام: قم بتفعيل هذا الزر لعزل النظام بالكامل عن الشبكات الخارجية وحماية السجلات المصرفية الحساسة. في هذا الوضع، يتم تحويل جميع عمليات الذكاء الاصطناعي وصياغة السياسات لتتم محلياً بالكامل عبر نموذج غوغل غيما المعزول دون تسريب أي بيانات.',
       position: 'bottom',
       view: 'dashboard'
     },
     {
       target: '#sidebar-liveVoiceDemo',
-      title: 'بيئة تجربة الوكيل الصوتي السيبراني',
-      content: 'مرحباً بك في بيئة تجربة الوكيل الصوتي! هنا يمكنك اختبار التوليف الصوتي المحلي ومخاطبة مسؤول الحوكمة الافتراضي بالذكاء الاصطناعي من خلال الأوامر الصوتية الذكية مباشرة.',
+      title: 'التحكم والتنقل بالأوامر الصوتية',
+      content: 'كيفية الاستخدام: اضغط على زر الميكروفون في الشريط الجانبي أو ادخل إلى هذه الصفحة وتحدث مباشرة للنظام. جرب نطق أوامر مثل "افتح لوحة التحكم" أو "افتح سجل المخاطر" أو "افتح إطارات ساما" للتنقل والتحكم الكامل بدون استخدام اليدين عبر تقنية التعرف الصوتي المحلي.',
       position: 'left',
       view: 'liveVoiceDemo'
     }
