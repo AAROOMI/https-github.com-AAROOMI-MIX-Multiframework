@@ -103,23 +103,41 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
 
     // Set up standard Speech Recognition as a backup / manual flow
     useEffect(() => {
-        if ('webkitSpeechRecognition' in window) {
-            const SpeechRecognition = (window as any).webkitSpeechRecognition;
-            recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = false;
-            recognitionRef.current.interimResults = false;
+        const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognitionClass) {
+            const rec = new SpeechRecognitionClass();
+            recognitionRef.current = rec;
+            rec.continuous = false;
+            rec.interimResults = false;
+            rec.lang = 'en-US';
             
-            recognitionRef.current.onresult = (event: any) => {
+            rec.onresult = (event: any) => {
                 const text = event.results[0][0].transcript;
                 setTranscript(text);
                 handleProcessRequest(text);
             };
 
-            recognitionRef.current.onend = () => {
-                if (status === 'listening') setStatus('idle');
+            rec.onerror = (event: any) => {
+                console.warn("Speech recognition error:", event.error);
+                if (event.error === 'not-allowed') {
+                    setIsMicAvailable(false);
+                    addLog("🎙️ [Speech Engine] Microphone access not allowed or blocked. Falling back to simulated query or manual typing.", "system");
+                } else {
+                    addLog(`🎙️ [Speech Engine] Error: ${event.error}. Please try again or type manually.`, "system");
+                }
+                setStatus('idle');
+                setPipelineState('idle');
             };
+
+            rec.onend = () => {
+                // Return to idle if we were listening but did not get results
+                setStatus((prev) => (prev === 'listening' ? 'idle' : prev));
+            };
+        } else {
+            setIsMicAvailable(false);
+            console.warn("SpeechRecognition not supported in this browser.");
         }
-    }, [status]);
+    }, []);
 
     // Active Browser-Side VAD (Sound Analyzer) Hook
     useEffect(() => {
@@ -171,26 +189,22 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
                     silenceStart = Date.now();
                     if (!speakingDetected) {
                         speakingDetected = true;
-                        setPipelineState('vad_listening');
                         
                         // INTERRUPTION LAYER: If user speaks while active audio is outputting, kill immediately!
                         if (isInterruptionEnabled && (status === 'meeting' || status === 'speaking' || pipelineState === 'audio_out')) {
                             handleInterrupt();
                         } else {
-                            addLog("🎙️ [Silero VAD] Detected user voice initiation...", "human");
+                            addLog("🎙️ [VAD Engine] Detected human voice activation...", "human");
                         }
                     }
                 } else {
                     if (speakingDetected) {
                         const silentDuration = Date.now() - silenceStart;
-                        // natural pause timeout (400ms to 600ms)
+                        // natural pause timeout (500ms)
                         if (silentDuration > 500) {
                             speakingDetected = false;
-                            setPipelineState('whisper_stt');
-                            addLog("🤫 [Silero VAD] User paused speaking. Cutting audio stream and sending to Faster-Whisper...", "system");
-                            
-                            // Auto-trigger simulated input or speech recognition
-                            triggerVADProcess();
+                            // Let the native SpeechRecognition API or manual text input handle the transcription,
+                            // rather than forcing triggerVADProcess() on background noise!
                         }
                     }
                 }
@@ -231,8 +245,8 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
         }
-        setPipelineState('vad_listening');
-        setStatus('listening');
+        setPipelineState('idle');
+        setStatus('idle');
         setActiveSpeaker(null);
         addLog("⚡ [Interruption Layer] User started speaking! Instantly stopped audio playback threads, flushed LLM generation buffer, and 'hushed' the boardroom agents.", "system");
     };
@@ -273,10 +287,21 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
         setLogs([]);
         
         if (recognitionRef.current && isMicAvailable) {
-            recognitionRef.current.start();
-            setStatus('listening');
-            setPipelineState('vad_listening');
-            addLog("Listening to microphone sound stream...", 'human');
+            try {
+                recognitionRef.current.start();
+                setStatus('listening');
+                setPipelineState('vad_listening');
+                addLog("🎙️ Speech Recognition started. Speak your custom query now...", 'human');
+            } catch (e) {
+                console.warn("Failed to start speech recognition:", e);
+                // Fallback to simulated VAD process
+                setStatus('listening');
+                setPipelineState('vad_listening');
+                addLog("[VAD Fallback] Speech recognition start error. Running simulated discussion...", 'system');
+                setTimeout(() => {
+                    triggerVADProcess();
+                }, 2500);
+            }
         } else {
             setStatus('listening');
             setPipelineState('vad_listening');
@@ -504,6 +529,25 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
     const triggerPresetQuery = (queryText: string) => {
         setTranscript(queryText);
         handleProcessRequest(queryText);
+    };
+
+    const handleToggleSession = () => {
+        if (status === 'listening') {
+            if (recognitionRef.current) {
+                try {
+                    recognitionRef.current.abort();
+                } catch (e) {
+                    console.warn(e);
+                }
+            }
+            setStatus('idle');
+            setPipelineState('idle');
+            addLog("Stopped microphone listening.", "system");
+        } else if (status === 'meeting' || status === 'speaking' || pipelineState === 'audio_out') {
+            handleInterrupt();
+        } else {
+            startListening();
+        }
     };
 
     return (
@@ -834,7 +878,7 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
                 
                 {/* Visual Boardroom Table */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8 min-h-[420px] flex flex-col relative overflow-hidden">
+                    <div className="water-gel-panel p-8 min-h-[420px] flex flex-col relative overflow-hidden">
                         
                         {/* Dynamic glow overlay reflecting active state */}
                         <div className={`absolute inset-0 transition-colors duration-500 pointer-events-none ${
@@ -902,21 +946,21 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
                                         : 'bg-transparent'
                             }`}>
                                 <button
-                                    onClick={startListening}
-                                    disabled={status !== 'idle' && status !== 'listening'}
+                                    onClick={handleToggleSession}
+                                    disabled={status === 'processing'}
                                     className={`w-28 h-28 rounded-full flex flex-col items-center justify-center transition-all shadow-xl overflow-hidden relative group border ${
                                         status === 'idle' 
                                             ? 'bg-gradient-to-br from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 border-amber-500 text-white hover:scale-105' 
                                             : status === 'listening'
                                                 ? 'bg-red-600 hover:bg-red-700 border-red-500 text-white animate-pulse'
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200/50 scale-95 cursor-not-allowed'
+                                                : 'bg-emerald-600 hover:bg-emerald-700 border-emerald-500 text-white hover:scale-105'
                                     }`}
                                 >
                                     <MicrophoneIcon className={`w-9 h-9 mb-1 transition-colors ${
                                         status === 'listening' ? 'animate-pulse text-white' : 'text-white'
                                     }`} />
-                                    <span className="text-[8px] font-normal uppercase tracking-widest text-center">
-                                        {status === 'idle' ? 'Start Session' : status === 'listening' ? 'Hush / Stop' : status}
+                                    <span className="text-[8px] font-normal uppercase tracking-widest text-center px-2">
+                                        {status === 'idle' ? 'Start Session' : status === 'listening' ? 'Stop Recording' : 'Hush Agents'}
                                     </span>
                                     
                                     {status === 'processing' && (
@@ -949,6 +993,40 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
                                 </div>
                             )}
 
+                            {/* Typed voice/text input fallback */}
+                            <div className="mt-8 w-full max-w-lg bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800">
+                                <label className="block text-[10px] font-normal uppercase text-gray-500 dark:text-gray-400 mb-2 tracking-wider">
+                                    Type Voice Message (Bidirectional Conversation Controller)
+                                </label>
+                                <form 
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const form = e.currentTarget;
+                                        const input = form.elements.namedItem('customPrompt') as HTMLInputElement;
+                                        if (input && input.value.trim()) {
+                                            handleProcessRequest(input.value.trim());
+                                            input.value = '';
+                                        }
+                                    }}
+                                    className="flex gap-2"
+                                >
+                                    <input 
+                                        name="customPrompt"
+                                        type="text"
+                                        placeholder="Ask a compliance question (e.g., Explain SAMA network isolation rules)..."
+                                        disabled={status !== 'idle'}
+                                        className="flex-1 bg-white dark:bg-gray-950 text-xs border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:outline-none focus:border-amber-500 dark:text-gray-100 placeholder-gray-400"
+                                    />
+                                    <button 
+                                        type="submit"
+                                        disabled={status !== 'idle'}
+                                        className="bg-amber-600 hover:bg-amber-700 text-white text-xs px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-40"
+                                    >
+                                        Speak
+                                    </button>
+                                </form>
+                            </div>
+                            
                             {/* Live Transcript Bubble */}
                             <div className="mt-8 max-w-lg w-full text-center">
                                 {transcript && (
@@ -993,7 +1071,7 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
                 <div className="space-y-6">
                     
                     {/* Interactive Compliance Prompt Preset Trigger */}
-                    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-xl p-5">
+                    <div className="water-gel-panel p-5">
                         <h4 className="text-[10px] font-normal uppercase text-gray-400 flex items-center gap-1.5 tracking-wider mb-3">
                             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                             Trigger Audition Preset Questions
@@ -1021,7 +1099,7 @@ export const LiveVoiceDemoPage: React.FC<LiveVoiceDemoPageProps> = ({ company, u
                     </div>
 
                     {/* Stakeholder Voice Directives */}
-                    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-xl p-5 flex flex-col h-[280px]">
+                    <div className="water-gel-panel p-5 flex flex-col h-[280px]">
                         <div className="flex items-center justify-between mb-3 border-b border-gray-50 dark:border-gray-900 pb-2">
                             <h4 className="text-[10px] font-normal uppercase text-gray-400 flex items-center gap-1.5 tracking-wider">
                                 <Binary className="w-3.5 h-3.5 text-amber-600 animate-pulse" />

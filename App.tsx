@@ -1012,7 +1012,7 @@ export default function App() {
         {/* Content Area */}
         <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 relative">
             <div className="max-w-[1600px] mx-auto h-full space-y-6">
-                <div className="glass-panel border-white/5 min-h-full p-6 bg-white/[0.02] flex flex-col">
+                <div className="water-gel-panel min-h-full p-6 flex flex-col">
                     {currentView === 'saraAgent' && <DidEmbed />}
                     {currentView === 'dashboard' && (
                         <DashboardPage 

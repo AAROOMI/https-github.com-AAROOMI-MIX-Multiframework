@@ -46,7 +46,7 @@ const getStatusColor = (status: DocumentStatus | 'Not Covered', opacity = 1) => 
 };
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => (
-    <div className={`bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 p-6 ${className}`}>
+    <div className={`water-gel-panel p-6 ${className}`}>
         {children}
     </div>
 );

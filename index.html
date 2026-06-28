@@ -96,6 +96,95 @@
         box-shadow: none;
       }
 
+      /* Transparent Water Gel Panel (Dynamic Glassmorphic cards) */
+      .water-gel-panel {
+        background: rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(13, 148, 136, 0.08);
+        box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.6), 
+                    0 4px 18px rgba(13, 148, 136, 0.02);
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      html.dark .water-gel-panel {
+        background: rgba(15, 15, 26, 0.45);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(45, 212, 191, 0.08);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.04),
+                    0 4px 24px rgba(0, 0, 0, 0.25);
+      }
+      .water-gel-panel-hover:hover {
+        background: rgba(255, 255, 255, 0.7);
+        border-color: rgba(13, 148, 136, 0.18);
+        box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.8), 
+                    0 8px 32px rgba(13, 148, 136, 0.08);
+        transform: translateY(-1px);
+      }
+      html.dark .water-gel-panel-hover:hover {
+        background: rgba(20, 20, 35, 0.55);
+        border-color: rgba(45, 212, 191, 0.18);
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08),
+                    0 8px 32px rgba(45, 212, 191, 0.08);
+        transform: translateY(-1px);
+      }
+
+      /* High-Fidelity 3D Water-Gel Navigation Buttons */
+      .water-gel-nav-btn {
+        position: relative;
+        background: rgba(13, 148, 136, 0.04);
+        border: 1px solid rgba(13, 148, 136, 0.06);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        color: #0f766e;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4), 
+                    0 2px 4px rgba(0, 0, 0, 0.02);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+      html.dark .water-gel-nav-btn {
+        background: rgba(45, 212, 191, 0.02);
+        border: 1px solid rgba(45, 212, 191, 0.05);
+        color: #94a3b8;
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.02),
+                    0 2px 4px rgba(0, 0, 0, 0.15);
+      }
+      .water-gel-nav-btn:hover {
+        background: rgba(13, 148, 136, 0.08);
+        border-color: rgba(13, 148, 136, 0.15);
+        color: #0d9488;
+        transform: translateY(-0.5px);
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5), 
+                    0 4px 8px rgba(13, 148, 136, 0.06);
+      }
+      html.dark .water-gel-nav-btn:hover {
+        background: rgba(45, 212, 191, 0.05);
+        border-color: rgba(45, 212, 191, 0.12);
+        color: #2dd4bf;
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05),
+                    0 4px 8px rgba(45, 212, 191, 0.06);
+      }
+      
+      .water-gel-nav-btn-active {
+        background: rgba(13, 148, 136, 0.12);
+        border-color: rgba(13, 148, 136, 0.25);
+        color: #0d9488;
+        font-weight: 500;
+        box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.5), 
+                    inset 0 -1px 2px rgba(13, 148, 136, 0.1),
+                    0 4px 12px rgba(13, 148, 136, 0.12);
+      }
+      html.dark .water-gel-nav-btn-active {
+        background: rgba(45, 212, 191, 0.09);
+        border-color: rgba(45, 212, 191, 0.2);
+        color: #2dd4bf;
+        font-weight: 500;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.08), 
+                    inset 0 -1px 2px rgba(45, 212, 191, 0.03),
+                    0 4px 12px rgba(45, 212, 191, 0.12);
+      }
+
       #loading-indicator {
         display: flex;
         flex-direction: column;
