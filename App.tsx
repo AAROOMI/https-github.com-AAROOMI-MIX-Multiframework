@@ -350,7 +350,7 @@ export default function App() {
   };
 
   const addNotification = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
-    const id = Date.now().toString();
+    const id = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 5000);
   };

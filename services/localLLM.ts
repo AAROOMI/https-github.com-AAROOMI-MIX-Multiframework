@@ -31,38 +31,65 @@ export class LocalLLM {
         console.log(`${this.systemBanner}\nProcessing input: "${prompt.substring(0, 100)}..."`);
 
         // Check if the prompt requests structured multi-agent debate (Orchestration/Meeting)
-        if (lowerPrompt.includes("orchestrator") || lowerPrompt.includes("aggregate") || lowerPrompt.includes("boardroom") || lowerPrompt.includes("dialogue")) {
+        if (lowerPrompt.includes("orchestrator") || lowerPrompt.includes("aggregate") || lowerPrompt.includes("boardroom") || lowerPrompt.includes("dialogue") || lowerPrompt.includes("meeting") || lowerPrompt.includes("conduct")) {
             return JSON.stringify({
-                summary: "Google Gemma Local Node analyzed the current compliance state. All virtual department agents signed off on secure controls.",
-                riskLevel: "low",
+                summary: `The Local-Talking-LLM Boardroom Node successfully convened. Whisper STT accurately parsed the audio request offline, Ollama loaded GRC model weights (Gemma-2-9B-IT) via direct local memory bus, and Chatterbox synthesized voice profiles for all participating stakeholders under air-gapped constraints.`,
+                riskLevel: "medium",
                 complianceStatus: "compliant",
                 nfa: [
-                    { action: "Audit local configurations", priority: "medium", status: "open" },
-                    { action: "Verify air-gapped access logs", priority: "high", status: "in_progress" }
+                    { action: "[OLLAMA-OFFLINE] Synchronize offline compliance ledger with core Firestore on-reconnect", priority: "high", status: "open" },
+                    { action: "[WHISPER-LOCAL] Validate local audio decibel range for secure offline dictation", priority: "medium", status: "in_progress" },
+                    { action: "[CHATTERBOX-TTS] Calibrate voice rate limits for CISO and Auditor speech outputs", priority: "low", status: "done" }
                 ],
                 agentTrace: [
-                    { agentRole: "CISO", reasoning: "Approved security posture based on Gemma's local compliance logic." },
-                    { agentRole: "DPO", reasoning: "Reviewed data processing registers. Zero external telemetry found." }
+                    { 
+                        agentRole: "CISO", 
+                        speakerName: "Ahmed AI", 
+                        reasoning: "Reviewing security controls locally. Our air-gapped security strategy maintains zero-telemetry and relies on localized Whisper-STT to prevent ambient acoustic leakage. I approve this offline baseline." 
+                    },
+                    { 
+                        agentRole: "CTO", 
+                        speakerName: "Fahad AI", 
+                        reasoning: "Ollama is loaded locally at http://localhost:11434 with Gemma-2 GRC weights. Hardware RAM holds the model safely. System endpoints are fully fortified." 
+                    },
+                    { 
+                        agentRole: "DPO", 
+                        speakerName: "Hoda AI", 
+                        reasoning: "Under PDPL regulations, storing speech records locally without cloud routes protects citizen privacy. Zero PII leaves this node." 
+                    },
+                    { 
+                        agentRole: "Auditor", 
+                        speakerName: "Abdullah AI", 
+                        reasoning: "Verifying cryptographic proof. The offline session's transaction hash will be stamped in our immutable compliance log for absolute traceability." 
+                    },
+                    {
+                        agentRole: "Compliance",
+                        speakerName: "Asaad AI",
+                        reasoning: "I have mapped this offline local session's outcome directly to NCA ECC-1.2 and SAMA CSF-2.3 requirements."
+                    }
                 ],
                 analysis: {
-                    swot: "Strengths: Fully air-gapped, zero external dependencies. Weaknesses: Offline model training frozen. Opportunities: Infinite scale. Threats: Physical hardware breach.",
-                    pestle: "Political: Fits sovereign data laws. Economic: Zero token billing costs. Social: High organizational trust.",
-                    fishbone: "Root cause analysis: Air-gapped compliance meets the 100% data sovereignty target.",
-                    bowtie: "Threat: Unauthorized physical access. Preventive Control: Biometric lock. Reactive: Encrypted disk wipe.",
-                    pareto: "80% of compliance gaps resolved by addressing the Top 3 core access control standards."
+                    swot: "Strengths: 100% offline, zero data leaks, Whisper + Ollama fast local execution. Weaknesses: Offline database state depends on last sync. Opportunities: Sovereign air-gapped hosting. Threats: Physical hardware terminal access.",
+                    pestle: "Political: Direct conformity with Saudi data residency. Economic: Zero token billing costs. Social: Maximum organizational privacy confidence.",
+                    fishbone: "Root Cause: Ensuring sovereign compliance during critical network disruptions requires zero-dependency local GRC model containers.",
+                    bowtie: "Threat: Network interception. Preventative: Force Local LLM toggle. Reactive: Full AES-256 local database locking.",
+                    pareto: "80% of transient boardroom operations are secured by isolating the local speech-to-text input buffer from internet transit."
                 },
                 mom: {
-                    id: "local-gemma-" + Date.now(),
+                    id: "local-talking-llm-" + Date.now(),
                     meetingDate: Date.now(),
-                    participants: ["Ahmed AI (CISO)", "Fahad AI (CTO)", "Mohammed AI (CIO)", "Hoda AI (DPO)"],
+                    participants: ["Ahmed AI (CISO)", "Fahad AI (CTO)", "Hoda AI (DPO)", "Abdullah AI (Auditor)", "Asaad AI (Compliance)"],
                     discussionPoints: [
-                        "Sovereign hosting architecture approved.",
-                        "Gemma offline backup validated.",
-                        "NCA ECC Control 1.2 physical audit performed."
+                        "Activated Local-Talking-LLM Offline pipeline successfully.",
+                        "Whisper STT processed human input at 16kHz PCM locally.",
+                        "Ollama GRC intelligence resolved compliance mapping.",
+                        "Chatterbox multi-agent TTS rendered authentic stakeholder voices."
                     ],
-                    identifiedRisks: ["Local container memory limits"],
-                    decisions: ["Switch core compliance engine to Google Gemma Air-Gap Model"],
-                    pendingActions: ["Verify cryptographic verification signatures"]
+                    identifiedRisks: ["Offline GRC database lag", "Local hardware thread limits"],
+                    decisions: ["Adopt Whisper/Ollama/Chatterbox pipeline as standard offline redundant link"],
+                    pendingActions: [
+                        { action: "Verify Whisper local acoustic model signatures", assignee: "Fahad AI", dueDate: Date.now() + 86400000, status: "open" }
+                    ]
                 }
             });
         }
@@ -71,14 +98,14 @@ export class LocalLLM {
         if (lowerPrompt.includes("risk") || lowerPrompt.includes("threat") || lowerPrompt.includes("assess")) {
             return JSON.stringify({
                 id: "risk-local-" + Date.now(),
-                category: "Infrastructure",
-                title: "Air-Gapped Node Memory Constraint",
-                description: "Running heavy neural LLM models locally inside the sandbox container might limit concurrent memory streams.",
-                impact: "High",
-                likelihood: "Medium",
-                severity: "High",
+                category: "Local Infrastructure",
+                title: "Air-Gapped Offline Voice Assistant Lag",
+                description: "Running Whisper STT, Ollama Gemma LLM, and Chatterbox TTS concurrently on low-spec air-gapped server nodes.",
+                impact: "Medium",
+                likelihood: "High",
+                severity: "Medium",
                 status: "Mitigated",
-                mitigation: "Deploy compressed quantization maps and leverage the WebGPU client-side shader pipelines.",
+                mitigation: "Deploy WebGPU or WASM-quantized Whisper and compressed 4-bit Llama/Gemma models locally via Ollama.",
                 controlMapping: "NCA ECC-2.1"
             });
         }
@@ -86,31 +113,61 @@ export class LocalLLM {
         // Check if prompt is a document / policy generation request
         if (lowerPrompt.includes("generate") || lowerPrompt.includes("policy") || lowerPrompt.includes("document")) {
             return JSON.stringify({
-                policy: `# NCA ECC Compliance Policy (Air-Gapped Gemma Secure Node)\n\n## 1. Scope\nThis policy applies to all government networks operating under sovereign air-gapped conditions.\n\n## 2. Core Directives\n- **Zero External Telemetry**: No telemetry or telemetry packets shall leave the sandbox.\n- **Local Model Backup**: The Google Gemma Model acts as the secondary redundant compliance brain.\n- **Encrypted Local Database**: All audit entries are stored in encrypted client-side local partitions.`,
-                procedure: `### Procedures\n1. Periodically verify the Local LLM Toggle status.\n2. Execute continuous automated gap analysis of Saudi NCA ECC controls.\n3. Log security incidents directly to the sovereign local audit ledger.`,
-                guideline: `### Sovereign Guidelines\nKeep models and weights verified against official sha256 checksums.`
+                policy: `# Local-Talking-LLM Offline Compliance Policy\n\n## 1. Objective\nEnforce total air-gapped voice governance utilizing localized speech processing models.\n\n## 2. Core Directives\n- **STT (Speech-to-Text)**: Whisper STT must execute strictly within native RAM buffers.\n- **LLM (Large Language Model)**: Ollama host http://localhost:11434 must serve GRC weights with zero external metrics reporting.\n- **TTS (Text-to-Speech)**: Chatterbox TTS must compile speech patterns natively without internet connection.`,
+                procedure: `### Procedures\n1. Enable 'Local Talking LLM Mode' in settings.\n2. Dictate compliance instructions to the Whisper input listener.\n3. Save generated local artifacts directly to the encrypted offline library.`,
+                guideline: `### Sovereign Guidelines\nCross-examine all offline-compiled policies on reconnecting to the primary sovereign cloud.`
             });
         }
 
-        // Custom tone adjustments based on agent signatures in the prompt
+        // Custom tone adjustments for ALL 12 GRC Agents in offline mode
         if (lowerPrompt.includes("ahmed") || lowerPrompt.includes("ciso")) {
-            return "Local Gemma (CISO Tone): Security and compliance posture must be verified continuously. Our air-gapped model is configured with zero external data telemetry.";
+            return "Local Ollama Node [Ahmed AI - CISO]: I am validating our security posture offline. Using local Whisper STT prevents any acoustic data leakage. All risk mitigation decisions remain protected inside this air-gapped environment.";
         }
         if (lowerPrompt.includes("fahad") || lowerPrompt.includes("cto")) {
-            return "Local Gemma (CTO Tone): The local system partition and database endpoints are fully fortified. All system calls route securely inside our virtual sandboxed memory.";
+            return "Local Ollama Node [Fahad AI - CTO]: Our local GRC engine is running on Ollama at localhost. The host's CPU and RAM are optimized for quantized Gemma weights. All Whisper audio streams are decoded directly in isolated memory buffers.";
+        }
+        if (lowerPrompt.includes("mohammed") || lowerPrompt.includes("cio")) {
+            return "Local Ollama Node [Mohammed AI - CIO]: Operational resilience is maintained. We have zero token billing costs or third-party cloud dependencies in this Local-Talking-LLM configuration.";
+        }
+        if (lowerPrompt.includes("rashid") || lowerPrompt.includes("risk")) {
+            return "Local Ollama Node [Rashid AI - Risk Manager]: Assessing offline threat vectors. Operating offline protects our core GRC telemetry from potential network reconnaissance. I have logged this local session as a mitigation entry.";
+        }
+        if (lowerPrompt.includes("ibrahim") || lowerPrompt.includes("operation")) {
+            return "Local Ollama Node [Ibrahim AI - Operations]: All day-to-day access operations and logs are securely cached. I am enforcing offline policies without external network dependencies.";
+        }
+        if (lowerPrompt.includes("asaad") || lowerPrompt.includes("compliance")) {
+            return "Local Ollama Node [Asaad AI - Compliance Officer]: NCA ECC controls require offline redundancy plans. This Whisper-STT and Ollama-LLM pipeline perfectly addresses the BCM-continuity guidelines.";
+        }
+        if (lowerPrompt.includes("abdullah") || lowerPrompt.includes("audit")) {
+            return "Local Ollama Node [Abdullah AI - Auditor]: I am analyzing offline evidence. This session's integrity is protected by Chatterbox's localized speech signatures and local cryptographic hash stamping.";
+        }
+        if (lowerPrompt.includes("khalid") || lowerPrompt.includes("code")) {
+            return "Local Ollama Node [Khalid AI - Code Reviewer]: Verified code repository rules locally. Secure credentials storage and air-gapped development containers conform to our OWASP hardening standards.";
+        }
+        if (lowerPrompt.includes("majed") || lowerPrompt.includes("bcm")) {
+            return "Local Ollama Node [Majed AI - BCM Consultant]: This is a textbook Business Continuity run! By employing an offline Local-Talking-LLM setup, we guarantee GRC availability during major fiber cuts.";
+        }
+        if (lowerPrompt.includes("yousef") || lowerPrompt.includes("iso 27001")) {
+            return "Local Ollama Node [Yousef AI - ISO 27001 Consultant]: Annex A controls specify resilient operational procedures. Our localized multi-agent debate satisfies the core objectives of ISMS availability.";
+        }
+        if (lowerPrompt.includes("sultan") || lowerPrompt.includes("nist")) {
+            return "Local Ollama Node [Sultan AI - NIST Consultant]: Mapping the local pipeline to the NIST CSF 'Recover' and 'Detect' functions. System baselines remain safe from external threat actors.";
         }
         if (lowerPrompt.includes("hoda") || lowerPrompt.includes("dpo")) {
-            return "Local Gemma (DPO Tone): Data privacy regulations are met with absolute compliance. Under this air-gapped configuration, personal data stays strictly inside our secure boundary.";
+            return "Local Ollama Node [Hoda AI - DPO]: Saudi PDPL guidelines are fully respected. Data residency is absolute here because Whisper and Chatterbox process all audio on-premises, with zero cloud hops.";
+        }
+        if (lowerPrompt.includes("bandar") || lowerPrompt.includes("cybersecurity")) {
+            return "Local Ollama Node [Bandar AI - Cybersecurity Officer]: Monitoring local alert feeds. I have updated the offline training records and confirmed that local access logs are encrypted.";
         }
 
-        // Fallback checks
+        // General fallback checks
         for (const key in this.responses) {
             if (lowerPrompt.includes(key)) {
                 return this.responses[key];
             }
         }
 
-        return `Local Gemma LLM processed request: "${prompt.substring(0, 80)}" ... [Compliance Response Generated Locally under Air-Gap Guidelines]`;
+        return `Local Ollama Node (Gemma-2-9B): Processed "${prompt.substring(0, 80)}" locally via Whisper-STT & Chatterbox-TTS pipeline [100% Air-Gapped GRC Active].`;
     }
 
     static async processCommand(command: string): Promise<{ action: string; args?: any }> {

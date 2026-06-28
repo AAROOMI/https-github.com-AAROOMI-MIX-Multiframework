@@ -924,7 +924,7 @@ export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunA
 
                                                 const messageId = 'msg-' + Math.random().toString(36).substr(2, 5);
                                                 const publishLog = {
-                                                    id: Date.now().toString(),
+                                                    id: 'pub-' + Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
                                                     timestamp: timestampList(),
                                                     topic: solaceTopic,
                                                     sender: 'System Publisher',
@@ -936,7 +936,7 @@ export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunA
 
                                                 if (matchedAgents.length === 0) {
                                                     nextLogs.push({
-                                                        id: Date.now().toString() + 'no',
+                                                        id: 'no-' + Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9),
                                                         timestamp: timestampList(),
                                                         topic: solaceTopic,
                                                         sender: 'Solace Broker',
@@ -958,7 +958,7 @@ export const ComplianceAgentPage: React.FC<ComplianceAgentPageProps> = ({ onRunA
                                                         };
                                                         const phrase = agentQuotes[agent] || 'Initiating autonomous action loop.';
                                                         nextLogs.push({
-                                                            id: Date.now().toString() + 'match' + i,
+                                                            id: 'match-' + Date.now().toString() + '-' + i + '-' + Math.random().toString(36).substr(2, 9),
                                                             timestamp: timestampList(),
                                                             topic: solaceTopic,
                                                             sender: agent,
