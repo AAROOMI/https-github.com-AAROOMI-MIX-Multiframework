@@ -54,16 +54,16 @@ export class LocalLLM {
                     },
                     { 
                         agentRole: "DPO", 
-                        speakerName: "Hoda AI", 
+                        speakerName: "Noora AI", 
                         reasoning: "Under PDPL regulations, storing speech records locally without cloud routes protects citizen privacy. Zero PII leaves this node." 
                     },
                     { 
-                        agentRole: "Auditor", 
+                        agentRole: "CIA", 
                         speakerName: "Abdullah AI", 
                         reasoning: "Verifying cryptographic proof. The offline session's transaction hash will be stamped in our immutable compliance log for absolute traceability." 
                     },
                     {
-                        agentRole: "Compliance",
+                        agentRole: "CCO",
                         speakerName: "Asaad AI",
                         reasoning: "I have mapped this offline local session's outcome directly to NCA ECC-1.2 and SAMA CSF-2.3 requirements."
                     }
@@ -78,7 +78,7 @@ export class LocalLLM {
                 mom: {
                     id: "local-talking-llm-" + Date.now(),
                     meetingDate: Date.now(),
-                    participants: ["Ahmed AI (CISO)", "Fahad AI (CTO)", "Hoda AI (DPO)", "Abdullah AI (Auditor)", "Asaad AI (Compliance)"],
+                    participants: ["Ahmed AI (CISO)", "Fahad AI (CTO)", "Noora AI (DPO)", "Abdullah AI (Auditor)", "Asaad AI (Compliance)"],
                     discussionPoints: [
                         "Activated Local-Talking-LLM Offline pipeline successfully.",
                         "Whisper STT processed human input at 16kHz PCM locally.",
@@ -119,7 +119,7 @@ export class LocalLLM {
             });
         }
 
-        // Custom tone adjustments for ALL 12 GRC Agents in offline mode
+        // Custom tone adjustments for GRC Board Members in offline mode
         if (lowerPrompt.includes("ahmed") || lowerPrompt.includes("ciso")) {
             return "Local Ollama Node [Ahmed AI - CISO]: I am validating our security posture offline. Using local Whisper STT prevents any acoustic data leakage. All risk mitigation decisions remain protected inside this air-gapped environment.";
         }
@@ -129,35 +129,23 @@ export class LocalLLM {
         if (lowerPrompt.includes("mohammed") || lowerPrompt.includes("cio")) {
             return "Local Ollama Node [Mohammed AI - CIO]: Operational resilience is maintained. We have zero token billing costs or third-party cloud dependencies in this Local-Talking-LLM configuration.";
         }
-        if (lowerPrompt.includes("rashid") || lowerPrompt.includes("risk")) {
-            return "Local Ollama Node [Rashid AI - Risk Manager]: Assessing offline threat vectors. Operating offline protects our core GRC telemetry from potential network reconnaissance. I have logged this local session as a mitigation entry.";
+        if (lowerPrompt.includes("rashid") || lowerPrompt.includes("risk") || lowerPrompt.includes("cro")) {
+            return "Local Ollama Node [Rashid AI - Chief Risk Officer (CRO)]: Assessing offline threat vectors. Operating offline protects our core GRC telemetry from potential network reconnaissance. I have logged this local session as a mitigation entry.";
         }
-        if (lowerPrompt.includes("ibrahim") || lowerPrompt.includes("operation")) {
-            return "Local Ollama Node [Ibrahim AI - Operations]: All day-to-day access operations and logs are securely cached. I am enforcing offline policies without external network dependencies.";
+        if (lowerPrompt.includes("sara") || lowerPrompt.includes("governance") || lowerPrompt.includes("cgo")) {
+            return "Local Ollama Node [Sara AI - Chief Governance Officer (CGO)]: All day-to-day governance structures and policy frameworks are securely cached. I am enforcing policy mapping and organizational alignment.";
         }
-        if (lowerPrompt.includes("asaad") || lowerPrompt.includes("compliance")) {
-            return "Local Ollama Node [Asaad AI - Compliance Officer]: NCA ECC controls require offline redundancy plans. This Whisper-STT and Ollama-LLM pipeline perfectly addresses the BCM-continuity guidelines.";
+        if (lowerPrompt.includes("asaad") || lowerPrompt.includes("compliance") || lowerPrompt.includes("cco")) {
+            return "Local Ollama Node [Asaad AI - Chief Compliance Officer (CCO)]: NCA ECC controls require offline redundancy plans. This Whisper-STT and Ollama-LLM pipeline perfectly addresses the BCM-continuity guidelines.";
         }
-        if (lowerPrompt.includes("abdullah") || lowerPrompt.includes("audit")) {
-            return "Local Ollama Node [Abdullah AI - Auditor]: I am analyzing offline evidence. This session's integrity is protected by Chatterbox's localized speech signatures and local cryptographic hash stamping.";
+        if (lowerPrompt.includes("abdullah") || lowerPrompt.includes("audit") || lowerPrompt.includes("cia")) {
+            return "Local Ollama Node [Abdullah AI - Chief Internal Auditor (CIA)]: I am analyzing offline evidence. This session's integrity is protected by Chatterbox's localized speech signatures and local cryptographic hash stamping.";
         }
-        if (lowerPrompt.includes("khalid") || lowerPrompt.includes("code")) {
-            return "Local Ollama Node [Khalid AI - Code Reviewer]: Verified code repository rules locally. Secure credentials storage and air-gapped development containers conform to our OWASP hardening standards.";
+        if (lowerPrompt.includes("khalid") || lowerPrompt.includes("code") || lowerPrompt.includes("cqo")) {
+            return "Local Ollama Node [Khalid AI - Software Quality Officer (CQO)]: Verified code repository rules locally. Secure credentials storage and air-gapped development containers conform to our OWASP hardening standards.";
         }
-        if (lowerPrompt.includes("majed") || lowerPrompt.includes("bcm")) {
-            return "Local Ollama Node [Majed AI - BCM Consultant]: This is a textbook Business Continuity run! By employing an offline Local-Talking-LLM setup, we guarantee GRC availability during major fiber cuts.";
-        }
-        if (lowerPrompt.includes("yousef") || lowerPrompt.includes("iso 27001")) {
-            return "Local Ollama Node [Yousef AI - ISO 27001 Consultant]: Annex A controls specify resilient operational procedures. Our localized multi-agent debate satisfies the core objectives of ISMS availability.";
-        }
-        if (lowerPrompt.includes("sultan") || lowerPrompt.includes("nist")) {
-            return "Local Ollama Node [Sultan AI - NIST Consultant]: Mapping the local pipeline to the NIST CSF 'Recover' and 'Detect' functions. System baselines remain safe from external threat actors.";
-        }
-        if (lowerPrompt.includes("hoda") || lowerPrompt.includes("dpo")) {
-            return "Local Ollama Node [Hoda AI - DPO]: Saudi PDPL guidelines are fully respected. Data residency is absolute here because Whisper and Chatterbox process all audio on-premises, with zero cloud hops.";
-        }
-        if (lowerPrompt.includes("bandar") || lowerPrompt.includes("cybersecurity")) {
-            return "Local Ollama Node [Bandar AI - Cybersecurity Officer]: Monitoring local alert feeds. I have updated the offline training records and confirmed that local access logs are encrypted.";
+        if (lowerPrompt.includes("noora") || lowerPrompt.includes("dpo") || lowerPrompt.includes("privacy")) {
+            return "Local Ollama Node [Noora AI - Data Protection Officer (DPO)]: Saudi PDPL guidelines are fully respected. Data residency is absolute here because Whisper and Chatterbox process all audio on-premises, with zero cloud hops.";
         }
 
         // General fallback checks

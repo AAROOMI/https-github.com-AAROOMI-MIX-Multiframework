@@ -749,27 +749,27 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
         const currentRunId = ++activeSimulationIdRef.current;
 
         // Establish the designated responsible agent based on technical domain context
-        let responsibleAgent = { name: "Ahmed Al-Mansoori", role: "CISO" };
+        let responsibleAgent = { name: "Ahmed AI", role: "CISO" };
         if (userMsg) {
             const query = userMsg.toLowerCase();
             if (query.includes("privacy") || query.includes("pdpl") || query.includes("consent") || query.includes("notice") || query.includes("data transfer")) {
-                responsibleAgent = { name: "Hoda AI", role: "DPO (Data Protection Officer)" };
+                responsibleAgent = { name: "Noora AI", role: "DPO" };
             } else if (query.includes("nca") || query.includes("sama") || query.includes("regulatory") || query.includes("framework") || query.includes("clause") || query.includes("compliance") || query.includes("governance")) {
-                responsibleAgent = { name: "Asaad AI", role: "Compliance Specialist" };
-            } else if (query.includes("code") || query.includes("review") || query.includes("software") || query.includes("sdlc") || query.includes("security scanning")) {
-                responsibleAgent = { name: "Khalid AI", role: "Secure Code Reviewer" };
+                responsibleAgent = { name: "Asaad AI", role: "CCO" };
+            } else if (query.includes("code") || query.includes("review") || query.includes("software") || query.includes("sdlc") || query.includes("security scanning") || query.includes("quality")) {
+                responsibleAgent = { name: "Khalid AI", role: "CQO" };
             } else if (query.includes("risk") || query.includes("mitigation") || query.includes("register") || query.includes("appetite") || query.includes("tolerance")) {
-                responsibleAgent = { name: "Rashid AI", role: "GRC Risk Manager" };
-            } else if (query.includes("backup") || query.includes("disaster") || query.includes("bcm") || query.includes("continuity") || query.includes("iso 22301") || query.includes("resilience")) {
-                responsibleAgent = { name: "Rayan AI", role: "ISO 22301 Specialist" };
+                responsibleAgent = { name: "Rashid AI", role: "CRO" };
+            } else if (query.includes("backup") || query.includes("disaster") || query.includes("bcm") || query.includes("continuity") || query.includes("resilience")) {
+                responsibleAgent = { name: "Fahad AI", role: "CTO" };
             } else if (query.includes("cloud") || query.includes("bucket") || query.includes("database") || query.includes("serverless") || query.includes("budget") || query.includes("asset")) {
                 responsibleAgent = { name: "Mohammed AI", role: "CIO" };
             } else if (query.includes("network") || query.includes("firewall") || query.includes("proxy") || query.includes("port") || query.includes("cyber range") || query.includes("encryption")) {
                 responsibleAgent = { name: "Fahad AI", role: "CTO" };
             } else if (query.includes("audit") || query.includes("evidence") || query.includes("check") || query.includes("verification") || query.includes("screenshot") || query.includes("logs")) {
-                responsibleAgent = { name: "Abdullah AI", role: "Internal Auditor" };
+                responsibleAgent = { name: "Abdullah AI", role: "CIA" };
             } else if (query.includes("iso 27001") || query.includes("isms") || query.includes("annex") || query.includes("statement of applicability")) {
-                responsibleAgent = { name: "Sahar AI", role: "ISO 27001 Specialist" };
+                responsibleAgent = { name: "Sara AI", role: "CGO" };
             }
         }
         setDesignatedRespondent(responsibleAgent);
@@ -799,18 +799,16 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                 : `Continue GRC strategizing. Focus on SAMA compliance, security architecture mapping, and auditor evidence verification.`;
 
             const sysInstruction = `
-            You are drafting a professional dialog for an active, multi-disciplinary, cross-functional GRC board meeting consisting of:
-            1. Ahmed Al-Mansoori (CISO) - Authoritative, ultimate accountability, risk-aware. Expert in incident handling and forensics.
-            2. Fahad AI (CTO) - Highly technical, focus on secure edge gateways, configurations, network protection, and keys.
-            3. Mohammed AI (CIO) - Visionary resource allocator, cloud identity structures, assets, and storage systems.
-            4. Ibrahim AI (Operations) - Execution supervisor, workflows, daily continuity, tracking.
-            5. Asaad AI (Compliance) - Meticulous researcher mapping SAMA CSF, NCA ECC, and legal frameworks.
-            6. Abdullah AI (Internal Auditor) - Skeptical, data-driven, demands telemetry evidence logs and configuration hashes.
-            7. Hoda AI (DPO) - Expert in Saudi Personal Data Protection Law (PDPL), privacy registry, consent flows, cross-border controls.
-            8. Sahar AI (ISO 27001 Specialist) - Lead implementer for Information Security Manager Manuals and Statement of Applicability (SoA) Annex A checks.
-            9. Rayan AI (ISO 22301 Specialist) - Expert in business continuity impact analysis (BIA), playbooks, resilience tests.
-            10. Khalid AI (Secure Code Reviewer) - In-depth static/dynamic vulnerabilities analyst, secure pipelines, and refactoring.
-            11. Rashid AI (GRC Risk Manager / Special Envoy) - Risk appetite models, threat modeling, financial risk.
+            You are drafting a professional dialog for an active, multi-disciplinary, cross-functional GRC board meeting consisting of the Enterprise GRC Agentic Executive Force:
+            1. Ahmed AI (CISO) - Chief Information Security Officer: Authoritative, ultimate security accountability, risk-aware. Expert in incident handling and forensics.
+            2. Fahad AI (CTO) - Chief Technology Officer: Highly technical, focus on secure edge gateways, configurations, network protection, and keys.
+            3. Mohammed AI (CIO) - Chief Information Officer: Visionary resource allocator, cloud identity structures, assets, and storage systems.
+            4. Asaad AI (CCO) - Chief Compliance Officer: Meticulous researcher mapping SAMA CSF, NCA ECC, and legal frameworks.
+            5. Abdullah AI (CIA) - Chief Internal Auditor: Skeptical, data-driven, demands telemetry evidence logs and configuration hashes.
+            6. Noora AI (DPO) - Data Protection Officer: Expert in Saudi Personal Data Protection Law (PDPL), privacy registry, consent flows, cross-border controls.
+            7. Sara AI (CGO) - Chief Governance Officer: Lead implementer for Information Security Manager Manuals, corporate structures, and Statement of Applicability.
+            8. Khalid AI (CQO) - Enterprise Code Review & Software Quality Officer: In-depth static/dynamic vulnerabilities analyst, secure pipelines, and refactoring.
+            9. Rashid AI (CRO) - Chief Risk Officer: Risk appetite models, threat modeling, financial risk.
 
             **Integrated Agentic Skills Repository Knowledge Base:**
             - Repository: https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git
@@ -826,10 +824,10 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
             ${conversationHistory}
 
             **Task:**
-            Produce a custom dialog with exactly 2 to 3 logically structured turns where boardroom members interact directly. The first turn MUST be from the designated domain expert ("Ahmed Al-Mansoori" | "Fahad AI" | "Mohammed AI" | "Ibrahim AI" | "Asaad AI" | "Abdullah AI" | "Hoda AI" | "Sahar AI" | "Rayan AI" | "Khalid AI" | "Rashid AI") of the question! Speak with absolute professional GRC authority, using concrete terms from our 754 technical skills repository.
+            Produce a custom dialog with exactly 2 to 3 logically structured turns where boardroom members interact directly. The first turn MUST be from the designated domain expert ("Ahmed AI" | "Fahad AI" | "Mohammed AI" | "Asaad AI" | "Abdullah AI" | "Noora AI" | "Sara AI" | "Khalid AI" | "Rashid AI") of the question! Speak with absolute professional GRC authority, using concrete terms from our 754 technical skills repository.
 
             **Output Format (JSON Array ONLY):**
-            [{ "speaker": "Ahmed Al-Mansoori" | "Fahad AI" | "Mohammed AI" | "Ibrahim AI" | "Asaad AI" | "Abdullah AI" | "Hoda AI" | "Sahar AI" | "Rayan AI" | "Khalid AI" | "Rashid AI", "message_en": "Professional feedback", "message_ar": "ترجمة عربية متناسقة ممتازة" }]
+            [{ "speaker": "Ahmed AI" | "Fahad AI" | "Mohammed AI" | "Asaad AI" | "Abdullah AI" | "Noora AI" | "Sara AI" | "Khalid AI" | "Rashid AI", "message_en": "Professional feedback", "message_ar": "ترجمة عربية متناسقة ممتازة" }]
             `;
 
             let simulatedThread: any[] = [];
@@ -2586,28 +2584,28 @@ export const VirtualDepartmentPage: React.FC<VirtualDepartmentPageProps> = ({
                                 { name: "Digital Forensics", count: 38, agent: "Ahmed AI", role: "CISO", color: "border-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/10 text-indigo-600" },
                                 { name: "Cryptography", count: 42, agent: "Mohammed AI", role: "CIO", color: "border-purple-500/20 bg-purple-50/20 dark:bg-purple-950/10 text-purple-600" },
                                 { name: "Malware Analysis", count: 31, agent: "Ahmed AI", role: "CISO", color: "border-red-500/20 bg-red-50/20 dark:bg-red-950/10 text-red-600" },
-                                { name: "DevSecOps & Secure SDLC", count: 36, agent: "Khalid AI", role: "Code Reviewer", color: "border-orange-500/20 bg-orange-50/20 dark:bg-orange-950/10 text-orange-600" },
-                                { name: "GRC & Risk Management", count: 48, agent: "Rashid AI", role: "Risk Manager", color: "border-teal-500/20 bg-teal-50/20 dark:bg-teal-950/10 text-teal-600" },
+                                { name: "DevSecOps & Secure SDLC", count: 36, agent: "Khalid AI", role: "CQO", color: "border-orange-500/20 bg-orange-50/20 dark:bg-orange-950/10 text-orange-600" },
+                                { name: "GRC & Risk Management", count: 48, agent: "Rashid AI", role: "CRO", color: "border-teal-500/20 bg-teal-50/20 dark:bg-teal-950/10 text-teal-600" },
                                 { name: "Threat Hunting", count: 34, agent: "Ahmed AI", role: "CISO", color: "border-amber-500/20 bg-amber-50/20 dark:bg-amber-950/10 text-amber-600" },
                                 { name: "Network Security", count: 40, agent: "Fahad AI", role: "CTO", color: "border-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 text-emerald-600" },
                                 { name: "Incident Response", count: 44, agent: "Ahmed AI", role: "CISO", color: "border-rose-500/20 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600" },
-                                { name: "Identity & Access Management (IAM)", count: 39, agent: "Ibrahim AI", role: "DOP", color: "border-cyan-500/20 bg-cyan-50/20 dark:bg-cyan-950/10 text-cyan-600" },
+                                { name: "Identity & Access Management (IAM)", count: 39, agent: "Mohammed AI", role: "CIO", color: "border-cyan-500/20 bg-cyan-50/20 dark:bg-cyan-950/10 text-cyan-600" },
                                 { name: "Penetration Testing", count: 35, agent: "Ahmed AI", role: "CISO", color: "border-fuchsia-500/20 bg-fuchsia-50/20 dark:bg-fuchsia-950/10 text-fuchsia-600" },
-                                { name: "Data Protection & Privacy", count: 43, agent: "Hoda AI", role: "DPO", color: "border-pink-500/20 bg-pink-50/20 dark:bg-pink-950/10 text-pink-600" },
-                                { name: "Application Security", count: 37, agent: "Khalid AI", role: "Code Reviewer", color: "border-violet-500/20 bg-violet-50/20 dark:bg-violet-950/10 text-violet-600" },
+                                { name: "Data Protection & Privacy", count: 43, agent: "Noora AI", role: "DPO", color: "border-pink-500/20 bg-pink-50/20 dark:bg-pink-950/10 text-pink-600" },
+                                { name: "Application Security", count: 37, agent: "Khalid AI", role: "CQO", color: "border-violet-500/20 bg-violet-50/20 dark:bg-violet-950/10 text-violet-600" },
                                 { name: "Vulnerability Management", count: 29, agent: "Ahmed AI", role: "CISO", color: "border-lime-500/20 bg-lime-50/20 dark:bg-lime-950/10 text-lime-600" },
                                 { name: "Security Architecture", count: 33, agent: "Fahad AI", role: "CTO", color: "border-sky-500/20 bg-sky-50/20 dark:bg-sky-950/10 text-sky-600" },
                                 { name: "OS Hardening & Linux Security", count: 28, agent: "Fahad AI", role: "CTO", color: "border-slate-500/20 bg-slate-50/20 dark:bg-slate-900/10 text-slate-600" },
-                                { name: "AI Safety & NIST AI RMF", count: 41, agent: "Sultan AI", role: "NIST Consultant", color: "border-teal-500/20 bg-teal-50/20 dark:bg-teal-900/10 text-teal-600" },
+                                { name: "AI Safety & NIST AI RMF", count: 41, agent: "Asaad AI", role: "CCO", color: "border-teal-500/20 bg-teal-50/20 dark:bg-teal-900/10 text-teal-600" },
                                 { name: "Threat Intelligence", count: 30, agent: "Ahmed AI", role: "CISO", color: "border-emerald-500/20 bg-emerald-50/25 dark:bg-emerald-950/10 text-emerald-600" },
-                                { name: "Audit & Compliance Tracking", count: 32, agent: "Abdullah AI", role: "Auditor", color: "border-yellow-500/20 bg-yellow-50/20 dark:bg-yellow-950/10 text-yellow-600" },
-                                { name: "Infrastructure Sec Audit", count: 27, agent: "Fahad AI", role: "CTO", color: "border-blue-500/25 bg-blue-50/25 dark:bg-blue-950/10 text-blue-600" },
-                                { name: "Continuous Security Monitoring", count: 31, agent: "Abdullah AI", role: "Auditor", color: "border-red-500/20 bg-red-50/20 dark:bg-red-950/10 text-red-600" },
-                                { name: "Business Continuity (ISO 22301)", count: 46, agent: "Majed AI", role: "BCM Consultant", color: "border-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 text-emerald-600" },
-                                { name: "ISMS Governance (ISO 27001)", count: 47, agent: "Yousef AI", role: "ISO 27001 Consultant", color: "border-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/10 text-indigo-600" },
-                                { name: "NIST CSF Benchmarking", count: 39, agent: "Sultan AI", role: "NIST Consultant", color: "border-purple-500/20 bg-purple-50/20 dark:bg-purple-950/10 text-purple-600" },
-                                { name: "Privacy Governance (PDPL)", count: 42, agent: "Hoda AI", role: "DPO", color: "border-rose-500/20 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600" },
-                                { name: "Secure Code Review & Refactoring", count: 35, agent: "Khalid AI", role: "Code Reviewer", color: "border-green-500/20 bg-green-50/20 dark:bg-green-950/10 text-green-600" }
+                                { name: "Audit & Compliance Tracking", count: 32, agent: "Abdullah AI", role: "CIA", color: "border-yellow-500/20 bg-yellow-50/20 dark:bg-yellow-950/10 text-yellow-600" },
+                                { name: "Infrastructure Sec Audit", count: 27, agent: "Abdullah AI", role: "CIA", color: "border-blue-500/25 bg-blue-50/25 dark:bg-blue-950/10 text-blue-600" },
+                                { name: "Continuous Security Monitoring", count: 31, agent: "Abdullah AI", role: "CIA", color: "border-red-500/20 bg-red-50/20 dark:bg-red-950/10 text-red-600" },
+                                { name: "Business Continuity (ISO 22301)", count: 46, agent: "Fahad AI", role: "CTO", color: "border-emerald-500/20 bg-emerald-50/20 dark:bg-emerald-950/10 text-emerald-600" },
+                                { name: "ISMS Governance (ISO 27001)", count: 47, agent: "Sara AI", role: "CGO", color: "border-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/10 text-indigo-600" },
+                                { name: "NIST CSF Benchmarking", count: 39, agent: "Asaad AI", role: "CCO", color: "border-purple-500/20 bg-purple-50/20 dark:bg-purple-950/10 text-purple-600" },
+                                { name: "Privacy Governance (PDPL)", count: 42, agent: "Noora AI", role: "DPO", color: "border-rose-500/20 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600" },
+                                { name: "Secure Code Review & Refactoring", count: 35, agent: "Khalid AI", role: "CQO", color: "border-green-500/20 bg-green-50/20 dark:bg-green-950/10 text-green-600" }
                             ].map((dom) => {
                                 const active = selectedCyberDomain === dom.name;
                                 return (
